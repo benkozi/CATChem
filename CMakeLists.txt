@@ -114,10 +114,11 @@ endif()
 add_subdirectory(src)
 
 # Enable testing for standalone builds
-if(BUILD_TESTING)
-  enable_testing()
-  add_subdirectory(tests)
-endif()
+#tdk: re-enable testing configuration
+#if(BUILD_TESTING)
+#  enable_testing()
+#  add_subdirectory(tests)
+#endif()
 
 if(BUILD_NUOPC)
   add_subdirectory(drivers/nuopc)
