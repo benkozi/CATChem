@@ -139,7 +139,7 @@ if(INSTALL_TESTS)
   install(TARGETS ${TEST_SOURCES} RUNTIME DESTINATION bin/tests)
 
   install(
-    FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../Configs/Default/CATChem_new_config.yml"
+    FILES "${CATCHEM_TEST_CONFIG_DIR}/CATChem_new_config.yml"
     DESTINATION share/tests/so4chem
     RENAME so4chem_config.yaml
   )

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.21)
 
 project(CATChem VERSION 0.1.0 LANGUAGES Fortran C CXX)
 
+# Global variables for path management
+set(CATCHEM_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(CATCHEM_SRC_DIR "${CATCHEM_ROOT_DIR}/src")
+
 # Option to build NUOPC cap (defaults to OFF)
 option(BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
 
