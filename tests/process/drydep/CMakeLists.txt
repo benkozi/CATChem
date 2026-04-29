@@ -46,13 +46,13 @@ endforeach()
 
 # Test data files
 configure_file(
-  "${CMAKE_SOURCE_DIR}/tests/Configs/Default/CATChem_new_config.yml"
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../Configs/Default/CATChem_new_config.yml"
   "${CMAKE_CURRENT_BINARY_DIR}/drydep_config.yaml"
   COPYONLY
 )
 
 # Additional test data files - copy other config files that might be needed
-file(GLOB TEST_DATA_FILES "${CMAKE_SOURCE_DIR}/tests/Configs/Default/*.yml")
+file(GLOB TEST_DATA_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../Configs/Default/*.yml")
 foreach(test_data_file ${TEST_DATA_FILES})
   get_filename_component(filename ${test_data_file} NAME)
   configure_file(
@@ -139,7 +139,7 @@ if(INSTALL_TESTS)
   install(TARGETS ${TEST_SOURCES} RUNTIME DESTINATION bin/tests)
 
   install(
-    FILES "${CMAKE_SOURCE_DIR}/tests/Configs/Default/CATChem_new_config.yml"
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../Configs/Default/CATChem_new_config.yml"
     DESTINATION share/tests/drydep
     RENAME drydep_config.yaml
   )
