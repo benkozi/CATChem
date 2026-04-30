@@ -7,7 +7,8 @@ set(CATCHEM_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CATCHEM_SRC_DIR "${CATCHEM_ROOT_DIR}/src")
 
 # Option to build NUOPC cap (defaults to OFF)
-option(BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
+option(CATCHEM_BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
+option(CATCHEM_BUILD_TESTING "Build CATChem testing framework" ON)
 
 # Option to build with MUSICA chemistry library (defaults to OFF)
 option(BUILD_MUSICA "Build with MUSICA chemistry library" OFF)
@@ -109,7 +110,7 @@ if(NOT TARGET NetCDF::NetCDF_Fortran)
   find_package(NetCDF REQUIRED COMPONENTS Fortran)
 endif()
 
-if(BUILD_NUOPC)
+if(CATCHEM_BUILD_NUOPC)
   if(NOT TARGET esmf)
     find_package(ESMF REQUIRED)
   endif()
@@ -118,12 +119,12 @@ endif()
 add_subdirectory(src)
 
 # Enable testing for standalone builds
-if(BUILD_TESTING)
+if(CATCHEM_BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()
 
-if(BUILD_NUOPC)
+if(CATCHEM_BUILD_NUOPC)
   add_subdirectory(drivers/nuopc)
 
   # Copy module files from include/ to mod/ for UFS integration during build
