@@ -34,13 +34,14 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
   endif()
 endif()
 
-# Force 32-bit reals for GOCART modules
-target_compile_options(${_lib} PRIVATE
-  $<$<Fortran_COMPILER_ID:Intel>:-real-size 32>
-  $<$<Fortran_COMPILER_ID:IntelLLVM>:-real-size 32>
-  $<$<Fortran_COMPILER_ID:GNU>:-fdefault-real-4>
-  $<$<Fortran_COMPILER_ID:NVHPC>:-real-size 32>
-)
+## tdk:rm
+## Force 32-bit reals for GOCART modules
+#target_compile_options(${_lib} PRIVATE
+#  $<$<Fortran_COMPILER_ID:Intel>:-real-size 32>
+#  $<$<Fortran_COMPILER_ID:IntelLLVM>:-real-size 32>
+#  $<$<Fortran_COMPILER_ID:GNU>:-fdefault-real-4>
+#  $<$<Fortran_COMPILER_ID:NVHPC>:-real-size 32>
+#)
 
 #find_package(NetCDF REQUIRED COMPONENTS Fortran)
 
