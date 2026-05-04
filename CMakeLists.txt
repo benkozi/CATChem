@@ -118,22 +118,34 @@ endif()
 
 # Auto-detect if default real is promoted to 8-byte by the parent build
 # or by per-target flags, and define USE_REAL8 so precision_mod sets fp=f8.
+set(CATCHEM_USE_REAL8 OFF)
 if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
   if(CMAKE_Fortran_FLAGS MATCHES "-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(STATUS "CATChem: detected -fdefault-real-8, enabling USE_REAL8")
+    set(CATCHEM_USE_REAL8 ON)
   endif()
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
   if(CMAKE_Fortran_FLAGS MATCHES "-r8|-real-size 64|-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(
-      STATUS
-      "CATChem: detected real-8 promotion flag, enabling USE_REAL8"
-    )
+    set(CATCHEM_USE_REAL8 ON)
   endif()
 endif()
 
+if(CATCHEM_USE_REAL8)
+  add_compile_definitions(USE_REAL8)
+  message(STATUS "CATChem: detected real-8 promotion flag, enabling USE_REAL8")
+endif()
+
 add_subdirectory(src)
+
+# If USE_REAL8 was enabled, ensure GOCART2G also uses 8-byte reals.
+# This fixes a mismatch when GOCART2G (which uses default 'real')
+# is linked with CATChem (which uses 'real(fp)').
+if(CATCHEM_USE_REAL8 AND TARGET GOCART2G)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
+    target_compile_options(GOCART2G PRIVATE -fdefault-real-8 -fdefault-double-8)
+  elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
+    target_compile_options(GOCART2G PRIVATE -r8)
+  endif()
+endif()
 
 # Enable testing for standalone builds
 if(CATCHEM_BUILD_TESTING)
