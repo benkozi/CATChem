@@ -47,20 +47,32 @@ set_target_properties(
 )
 
 #
-# yaml-cpp — declare via FetchContent so MUSICA and its dependencies reuse it
+# yaml-cpp — check for system package, otherwise build internal
 #
 
-include(FetchContent)
+find_package(yaml-cpp QUIET)
 
-# Configure yaml-cpp build options
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Build yaml-cpp tests")
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Build yaml-cpp tools")
-set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Build yaml-cpp contrib")
+if(yaml-cpp_FOUND)
+  message(STATUS "Found system yaml-cpp")
+  if(NOT TARGET yaml-cpp::yaml-cpp)
+    add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+  endif()
+else()
+  #tdk:rm
+  message(FATAL_ERROR "uh oh using internal.")
+  message(STATUS "Using internal yaml-cpp")
+  include(FetchContent)
 
-# Declare yaml-cpp as already available via FetchContent
-# This prevents MUSICA from fetching their own copy
-FetchContent_Declare(yaml-cpp SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp)
-FetchContent_MakeAvailable(yaml-cpp)
+  # Configure yaml-cpp build options
+  set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Build yaml-cpp tests")
+  set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Build yaml-cpp tools")
+  set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Build yaml-cpp contrib")
+
+  # Declare yaml-cpp as already available via FetchContent
+  # This prevents MUSICA from fetching their own copy
+  FetchContent_Declare(yaml-cpp SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/yaml-cpp)
+  FetchContent_MakeAvailable(yaml-cpp)
+endif()
 
 #
 # MUSICA Fortran API (optional, controlled by BUILD_MUSICA)
