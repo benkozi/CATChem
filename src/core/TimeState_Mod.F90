@@ -69,8 +69,7 @@ contains
       ! Calculate fractional hour of the day (UTC)
       if (present(mid_timestep)) then
          if (mid_timestep) then
-            fractional_hour = real(this%hour, fp) + real(this%minute, fp)/60.0_fp + &
-                              real(this%second, fp)/3600.0_fp + (this%timestep/2.0_fp)/3600.0_fp
+            fractional_hour = real(this%hour, fp) + real(this%minute, fp)/60.0_fp + real(this%second, fp)/3600.0_fp + (this%timestep/2.0_fp)/3600.0_fp
          end if
       else
          fractional_hour = real(this%hour, fp) + real(this%minute, fp)/60.0_fp + real(this%second, fp)/3600.0_fp
