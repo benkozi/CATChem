@@ -1,0 +1,16 @@
+FROM deckyfre/catchem-spack-base
+
+WORKDIR /opt/catchem/spack-stack
+
+
+RUN <<INSTALL_ALL
+  set -eu
+  . ./setup.sh
+
+  spack env activate catchem
+  spack add catchem@gcafs
+  spack concretize
+  spack install --fail-fast
+  spack gc -y
+  spack clean --all
+INSTALL_ALL
