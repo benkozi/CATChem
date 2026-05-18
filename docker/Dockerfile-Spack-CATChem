@@ -2,6 +2,7 @@ FROM deckyfre/catchem-spack-base
 
 WORKDIR /opt/catchem/spack-stack
 
+ENV CACHE_BUST=1
 RUN <<INSTALL_ALL
   set -eu
 
