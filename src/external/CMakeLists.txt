@@ -59,7 +59,7 @@ if(yaml-cpp_FOUND)
   endif()
 else()
   #tdk:rm
-  message(FATAL_ERROR "uh oh using internal.")
+#  message(FATAL_ERROR "uh oh using internal.")
   message(STATUS "Using internal yaml-cpp")
   include(FetchContent)
 

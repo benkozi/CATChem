@@ -4,10 +4,16 @@ WORKDIR /opt/catchem/spack-stack
 
 RUN <<INSTALL_ALL
   set -eu
+
+  pushd repos/builtin
+#  git remote add benkozi https://github.com/benkozi/spack-packages/
+  git fetch benkozi
+  git checkout cece-cice-test-benkozi
+  git log -1
+  popd
+
   . ./setup.sh
 
-  git pull
-  git log -1
   spack env activate catchem
   spack add catchem@gcafs
   spack concretize
