@@ -2,11 +2,12 @@ FROM deckyfre/catchem-spack-base
 
 WORKDIR /opt/catchem/spack-stack
 
-
 RUN <<INSTALL_ALL
   set -eu
   . ./setup.sh
 
+  git pull
+  git log -1
   spack env activate catchem
   spack add catchem@gcafs
   spack concretize
