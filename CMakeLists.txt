@@ -62,6 +62,7 @@ if(
     _catchem_compiler_options
     -ffree-line-length-none
   )
+endif()
 
 if(
   CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95"
