@@ -56,6 +56,15 @@ endif()
 
 if(
   CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95"
+)
+  list(
+    APPEND
+    _catchem_compiler_options
+    -ffree-line-length-none
+  )
+
+if(
+  CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95"
   AND CMAKE_BUILD_TYPE MATCHES "Debug"
 )
   list(
