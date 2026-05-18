@@ -1,0 +1,95 @@
+FROM ubuntu:24.04
+
+RUN apt-get update --yes && apt-get install --yes tmux \
+  vim \
+  less \
+  git \
+  build-essential \
+  python3 \
+  python3-dev \
+  gfortran \
+  cmake \
+  curl \
+  ca-certificates \
+  libopenmpi-dev \
+  libcurl4-openssl-dev \
+#  libopenblas-dev \
+#  liblapack-dev \
+#  libpcre2-dev \
+#  libpcre2-16-0 \
+#  libpcre2-32-0 \
+#  libgsl-dev \
+#  m4 \
+  tar \
+  gettext \
+  libgettextpo-dev \
+#  ninja-build \
+  nco \
+#  libaec-dev \
+#  libsz2 \
+  libxml2 \
+  libxml2-dev \
+  libxml2-utils \
+  && apt-get purge -y --auto-remove \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
+
+WORKDIR /opt/catchem
+RUN git clone --depth=1 --recurse-submodules https://github.com/JCSDA/spack-stack
+WORKDIR /opt/catchem/spack-stack/repos/builtin
+ARG CACHE_BUST=3
+RUN git remote add benkozi https://github.com/benkozi/spack-packages.git && git fetch benkozi && git checkout benkozi/cece-cice-test-benkozi
+
+WORKDIR /opt/catchem/spack-stack
+ENV SPACK_ROOT=/opt/catchem/spack-stack/spack
+
+#COPY spack.yaml /opt/regrid-wrapper/spack-stack/spack.yaml
+
+SHELL ["/bin/bash", "-c"]
+
+RUN <<INSTALL_ALL
+  set -eu
+  . ./setup.sh
+  spack compiler find
+  spack external find rust curl perl git python cmake gettext findutils tar libxml2 openssl openmpi
+  spack config add "packages:rust:buildable:false"
+  spack config add "packages:curl:buildable:false"
+  spack config add "packages:perl:buildable:false"
+  spack config add "packages:git:buildable:false"
+  spack config add "packages:python:buildable:false"
+  spack config add "packages:cmake:buildable:false"
+  spack config add "packages:gettext:buildable:false"
+  spack config add "packages:findutils:buildable:false"
+  spack config add "packages:tar:buildable:false"
+  spack config add "packages:libxml2:buildable:false"
+  spack config add "packages:openssl:buildable:false"
+  spack config add "packages:openmpi:buildable:false"
+
+  spack config add "packages:catchem:require:+mpi+nuopc^openmpi"
+  spack config add "packages:esmf:require:^openmpi"
+
+  spack env create catchem
+  spack env activate catchem
+  spack add esmf
+  spack concretize
+  spack install --fail-fast
+#  spack gc -y
+#  spack clean --all
+INSTALL_ALL
+
+# 1. Create a system user (-r) with no password
+# We also create a home directory (-m)
+#RUN useradd -r -m rw
+
+# 2. (Optional) Set up your app directory and give the user ownership
+#WORKDIR /opt/regrid-wrapper
+#RUN chown -R rw:rw /opt/regrid-wrapper
+
+# 3. Switch to the non-root user
+#USER rw
+
+#WORKDIR /opt/regrid-wrapper/spack-stack
