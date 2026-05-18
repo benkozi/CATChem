@@ -79,7 +79,6 @@ if(
     -ffpe-trap=invalid,zero,overflow
     -fbacktrace
     -fmax-errors=0
-    -ffree-line-length-none
   )
 elseif(
   CMAKE_Fortran_COMPILER_ID MATCHES "Intel"
