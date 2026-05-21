@@ -10,6 +10,7 @@ set -eux
 #  .
 
 docker buildx build \
+  --no-cache \
   --platform linux/amd64 \
   -t deckyfre/catchem-spack:0.0.1 \
   -t deckyfre/catchem-spack:latest \
