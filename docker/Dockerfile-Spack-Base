@@ -69,12 +69,11 @@ RUN <<INSTALL_ALL
   spack config add "packages:openssl:buildable:false"
   spack config add "packages:openmpi:buildable:false"
 
-  spack config add "packages:catchem:require:+mpi+nuopc^openmpi"
   spack config add "packages:esmf:require:^openmpi"
 
   spack env create catchem
   spack env activate catchem
-  spack add esmf
+  spack add esmf yaml-cpp
   spack concretize
   spack install --fail-fast
 #  spack gc -y
