@@ -54,6 +54,11 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=all")
 endif()
 
+# No Fortran line length restrictions on all GNU build types
+if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
+  list(APPEND _catchem_compiler_options -ffree-line-length-none)
+endif()
+
 if(
   CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95"
 )
