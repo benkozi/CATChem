@@ -17,10 +17,20 @@ RUN <<INSTALL_ALL
 
   spack config add "packages:catchem:require:+mpi+nuopc^openmpi"
 
-  spack env activate catchem
+  spack env create catchem-installed
+  spack env activate catchem-installed
+#  spack env activate catchem
   spack add catchem@gcafs
   spack concretize
   spack install --fail-fast
   spack gc -y
   spack clean --all
 INSTALL_ALL
+
+RUN cat <<EOF >> ~/.bashrc
+# enable spack env by default
+source /opt/catchem/spack-stack/setup.sh
+spack env activate catchem-installed
+EOF
+
+CMD ["/bin/bash"]
