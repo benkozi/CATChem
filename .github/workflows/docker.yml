@@ -81,8 +81,8 @@ jobs:
       - name: Build and push production image
         uses: docker/build-push-action@v7
         with:
-          context: ./docker
-          file: Dockerfile-Spack-CATChem
+          context: .
+          file: ./docker/Dockerfile-Spack-CATChem
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
