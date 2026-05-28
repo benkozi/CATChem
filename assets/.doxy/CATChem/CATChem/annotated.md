@@ -4,6 +4,9 @@
 
 Here are the classes, structs, unions and interfaces with brief descriptions:
 
+* **namespace** [**carbchemcommon\_mod**](namespacecarbchemcommon__mod.md)     
+* **namespace** [**carbchemprocesscreator\_mod**](namespacecarbchemprocesscreator__mod.md)     
+* **namespace** [**carbchemscheme\_gocart\_mod**](namespacecarbchemscheme__gocart__mod.md)     
 * **namespace** [**catchem**](namespacecatchem.md)     
 * **namespace** [**catchem\_api**](namespacecatchem__api.md)     
 * **namespace** [**catchem\_highlevel\_api**](namespacecatchem__highlevel__api.md)     
@@ -36,6 +39,7 @@ Here are the classes, structs, unions and interfaces with brief descriptions:
 * **namespace** [**metstate\_mod**](namespacemetstate__mod.md)     
 * **namespace** [**precision\_mod**](namespaceprecision__mod.md)     
     * **interface** [**rae**](interfaceprecision__mod_1_1rae.md)     
+* **namespace** [**processcarbcheminterface\_mod**](namespaceprocesscarbcheminterface__mod.md) _Process for computing chemical production and loss of carbon species._     
 * **namespace** [**processdrydepinterface\_mod**](namespaceprocessdrydepinterface__mod.md) _Process for computing dry deposition of gas and aerosol species._     
 * **namespace** [**processfactory\_mod**](namespaceprocessfactory__mod.md)     
 * **namespace** [**processinterface\_mod**](namespaceprocessinterface__mod.md)     
@@ -96,6 +100,7 @@ Here are the classes, structs, unions and interfaces with brief descriptions:
 * **interface** [**c\_yaml\_load\_file**](interfaceyaml__interface__mod_1_1c__yaml__load__file.md)     
 * **interface** [**c\_yaml\_load\_string**](interfaceyaml__interface__mod_1_1c__yaml__load__string.md)     
 * **interface** [**c\_yaml\_save\_file**](interfaceyaml__interface__mod_1_1c__yaml__save__file.md)     
+* **interface** [**c\_yaml\_sequence\_to\_map**](interfaceyaml__interface__mod_1_1c__yaml__sequence__to__map.md)     
 * **interface** [**c\_yaml\_set\_integer**](interfaceyaml__interface__mod_1_1c__yaml__set__integer.md)     
 * **interface** [**c\_yaml\_set\_logical**](interfaceyaml__interface__mod_1_1c__yaml__set__logical.md)     
 * **interface** [**c\_yaml\_set\_real**](interfaceyaml__interface__mod_1_1c__yaml__set__real.md)     
