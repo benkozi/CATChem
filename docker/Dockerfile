@@ -1,4 +1,5 @@
-FROM deckyfre/catchem-spack-base:latest
+ARG BASE_IMAGE=deckyfre/catchem-spack-base:latest
+FROM ${BASE_IMAGE}
 
 # Use bash for subsequent RUN commands
 SHELL ["/bin/bash", "-c"]
