@@ -4,7 +4,7 @@ set -eux
 
 #docker buildx build \
 #  --platform linux/amd64 \
-#  -t deckyfre/catchem-spack-base:0.0.2 \
+#  -t deckyfre/catchem-spack-base:0.0.3 \
 #  -t deckyfre/catchem-spack-base:latest \
 #  -f Dockerfile-Spack-Base \
 #  ..
@@ -19,7 +19,7 @@ set -eux
 docker buildx build \
   --no-cache \
   --platform linux/amd64 \
-  -t deckyfre/catchem:0.0.1 \
+  -t deckyfre/catchem:0.0.2 \
   -t deckyfre/catchem:latest \
   -f Dockerfile \
   ..

@@ -1,4 +1,4 @@
-FROM deckyfre/catchem-spack-base:0.0.2
+FROM deckyfre/catchem-spack-base:latest
 
 # Use bash for subsequent RUN commands
 SHELL ["/bin/bash", "-c"]

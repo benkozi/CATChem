@@ -30,6 +30,10 @@ RUN apt-get update --yes && apt-get install --yes tmux \
   libxml2 \
   libxml2-dev \
   libxml2-utils \
+  libnetcdf-dev \
+  libnetcdff-dev \
+  liblapack-dev \
+  libopenblas-dev \
   && apt-get purge -y --auto-remove \
   && rm -rf /var/lib/apt/lists/*
 
@@ -68,6 +72,8 @@ RUN <<INSTALL_ALL
   spack config add "packages:libxml2:buildable:false"
   spack config add "packages:openssl:buildable:false"
   spack config add "packages:openmpi:buildable:false"
+  spack config add "packages:netcdf-c:buildable:false"
+  spack config add "packages:netcdf-fortran:buildable:false"
 
   spack config add "packages:esmf:require:^openmpi"
 
