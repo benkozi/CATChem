@@ -34,7 +34,7 @@ RUN apt-get update --yes && apt-get install --yes tmux \
   libnetcdff-dev \
   liblapack-dev \
   libopenblas-dev \
-  python3-cython \
+  cython3 \
   && apt-get purge -y --auto-remove \
   && rm -rf /var/lib/apt/lists/*
 
