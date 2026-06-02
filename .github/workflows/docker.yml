@@ -83,22 +83,30 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile-Spack-Base
-          push: true
+#          push: true
+          platforms: linux/amd64
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
-          cache-to: type=inline
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
+            type=local,src=/tmp/.buildx-cache
+          cache-to: |
+            type=local,dest=/tmp/.buildx-cache,mode=max
+            type=inline
 
-      # 10. Build and push prod image
+      # 10. Build and push production image
       - name: Build and push production image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile-Spack-CATChem
-          push: true
+#          push: true
           platforms: linux/amd64
 #          platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
 #          tags: |
 #            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
 #            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
-          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-from: |
+            type=local,src=/tmp/.buildx-cache
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
+          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
