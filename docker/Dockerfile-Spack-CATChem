@@ -1,4 +1,4 @@
-FROM deckyfre/catchem-spack-base:0.0.2
+FROM deckyfre/catchem-spack-base:latest
 
 WORKDIR /opt/catchem/spack-stack
 
