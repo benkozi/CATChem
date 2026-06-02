@@ -83,15 +83,16 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile-Spack-Base
-#          push: true
+          push: true
           platforms: linux/amd64
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
+          tags: | 
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
           cache-from: |
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
             type=local,src=/tmp/.buildx-cache
           cache-to: |
             type=local,dest=/tmp/.buildx-cache,mode=max
-            type=inline
 
       # 10. Build and push production image
       - name: Build and push production image
@@ -99,11 +100,13 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-#          push: true
+          push: true
           platforms: linux/amd64
 #          platforms: linux/amd64,linux/arm64
+#          build-args: |
+#            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
 #          tags: |
 #            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
