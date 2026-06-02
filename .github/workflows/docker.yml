@@ -98,7 +98,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: ./docker/Dockerfile-Spack-CATChem
+          file: ./docker/Dockerfile
 #          push: true
           platforms: linux/amd64
 #          platforms: linux/amd64,linux/arm64
