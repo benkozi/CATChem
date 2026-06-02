@@ -34,6 +34,7 @@ RUN apt-get update --yes && apt-get install --yes tmux \
   libnetcdff-dev \
   liblapack-dev \
   libopenblas-dev \
+  python3-cython \
   && apt-get purge -y --auto-remove \
   && rm -rf /var/lib/apt/lists/*
 
@@ -45,8 +46,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no
 WORKDIR /opt/catchem
 RUN git clone --depth=1 --recurse-submodules https://github.com/JCSDA/spack-stack
 WORKDIR /opt/catchem/spack-stack/repos/builtin
-ARG CACHE_BUST=3
-RUN git remote add benkozi https://github.com/benkozi/spack-packages.git && git fetch benkozi && git checkout benkozi/cece-cice-test-benkozi
+#ARG CACHE_BUST=3
+#RUN git remote add benkozi https://github.com/benkozi/spack-packages.git && git fetch benkozi && git checkout benkozi/cece-cice-test-benkozi
 
 WORKDIR /opt/catchem/spack-stack
 ENV SPACK_ROOT=/opt/catchem/spack-stack/spack
@@ -59,12 +60,13 @@ RUN <<INSTALL_ALL
   set -eu
   . ./setup.sh
   spack compiler find
-  spack external find rust curl perl git python cmake gettext findutils tar libxml2 openssl openmpi
+  spack external find rust curl perl git python py-cython cmake gettext findutils tar libxml2 openssl openmpi netcdf-c netcdf-fortran
   spack config add "packages:rust:buildable:false"
   spack config add "packages:curl:buildable:false"
   spack config add "packages:perl:buildable:false"
   spack config add "packages:git:buildable:false"
   spack config add "packages:python:buildable:false"
+  spack config add "packages:py-cython:buildable:false"
   spack config add "packages:cmake:buildable:false"
   spack config add "packages:gettext:buildable:false"
   spack config add "packages:findutils:buildable:false"
