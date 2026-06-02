@@ -86,6 +86,11 @@ jobs:
             base:
               - 'docker/Dockerfile-Spack-Base'
 
+      - name: Debug Filter Output
+        run: |
+          echo "Base changed: ${{ steps.filter.outputs.base }}"
+          echo "All changed files: ${{ steps.filter.outputs.changes }}"
+
       # 9. Build and push Spack Base image
       - name: Build and push Spack Base image
         if: steps.filter.outputs.base == 'true'
