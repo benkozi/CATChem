@@ -2,6 +2,13 @@ name: Semantic Release
 
 on:
   workflow_call:
+    outputs:
+      new_release_version:
+        description: "The version of the new release"
+        value: ${{ jobs.release.outputs.new_release_version }}
+      new_release_published:
+        description: "Whether a new release was published"
+        value: ${{ jobs.release.outputs.new_release_published }}
 
 jobs:
   release:
