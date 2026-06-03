@@ -3,6 +3,15 @@ name: Build, Test and Push Docker Image
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      image_tag:
+        description: 'The tag to use for the Docker image'
+        required: false
+        type: string
+      cache_tag:
+        description: 'The tag to use for cache-from'
+        required: false
+        type: string
 
 jobs:
   build-test-push:
@@ -29,46 +38,30 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: ${{ runner.os }}-buildx-
 
-#      # 4. Cache npm dependencies
-#      - name: Cache npm dependencies
-#        uses: actions/cache@v5
-#        with:
-#          path: ~/.npm
-#          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
-#          restore-keys: ${{ runner.os }}-npm-
-
-      # 5. Extract metadata
+      # 4. Extract metadata
       - name: Extract metadata
         id: meta
         run: |
           echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_OUTPUT"
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          SHORT_SHA=${GITHUB_SHA::7}
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          
+          # Determine the tag to use
+          if [ -n "${{ inputs.image_tag }}" ]; then
+            echo "TAG=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          fi
+          
+          # Determine the cache tag
+          if [ -n "${{ inputs.cache_tag }}" ]; then
+            RAW_CACHE_TAG="${{ inputs.cache_tag }}"
+            echo "CACHE_TAG=${RAW_CACHE_TAG::7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "CACHE_TAG=latest" >> "$GITHUB_OUTPUT"
+          fi
 
-#      # 6. Build dev Docker image
-#      - name: Build Docker image for tests
-#        uses: docker/build-push-action@v7
-#        with:
-#          context: ./docker
-#          file: Dockerfile-Spack-CATChem
-#          tags: ${{ steps.meta.outputs.REPO_NAME }}-dev:latest
-#          load: true # Load to local Docker daemon for testing
-#          cache-from: type=local,src=/tmp/.buildx-cache
-#          cache-to: type=local,dest=/tmp/.buildx-cache,mode=max
-
-#      # 7. Run Vitest tests
-#      - name: Run Vitest tests and generate report
-#        run: |
-#          docker run --rm \
-#            --workdir /app \
-#            --entrypoint "" \
-#            ${{ steps.meta.outputs.REPO_NAME }}-dev:latest \
-#            sh -c "npm ci && npx vitest run --reporter=verbose"
-#        env:
-#          CI: true
-#          NODE_ENV: test
-#        timeout-minutes: 10
-
-      # 8. Login to Docker Hub
+      # 5. Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -83,12 +76,7 @@ jobs:
             base:
               - 'docker/Dockerfile-Spack-Base'
 
-      - name: Debug Filter Output
-        run: |
-          echo "Base changed: ${{ steps.filter.outputs.base }}"
-          echo "All changed files: ${{ steps.filter.outputs.changes }}"
-
-      # 9. Build and push Spack Base image
+      # 6. Build and push Spack Base image
       - name: Build and push Spack Base image
         if: steps.filter.outputs.base == 'true'
         uses: docker/build-push-action@v7
@@ -98,13 +86,12 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}:${{ steps.meta.outputs.SHORT_SHA }}
-#            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
-          cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-to: type=inline
 
-      # 10. Build and push production image
+      # 7. Build and push production image
       - name: Build and push production image
         uses: docker/build-push-action@v7
         with:
@@ -112,16 +99,9 @@ jobs:
           file: ./docker/Dockerfile
           push: true
           platforms: linux/amd64
-#          platforms: linux/amd64,linux/arm64
-#          build-args: |
-#            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}:${{ steps.meta.outputs.SHORT_SHA }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME_DEV }}:${{ steps.meta.outputs.SHORT_SHA }}
-#          tags: |
-#            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
-#            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
-#          cache-from: |
-#            type=local,src=/tmp/.buildx-cache
-#            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
-#          cache-to: type=inline
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
+          cache-from: |
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.CACHE_TAG }}
+          cache-to: type=inline

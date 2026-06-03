@@ -31,9 +31,27 @@ jobs:
 
   release:
     needs: [lint, ci-gnu, ci-spack, docker-develop]
-#    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/container-build'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/semantic-release.yml
+    secrets: inherit
+
+  docker-release:
+    needs: [release]
+    if: needs.release.outputs.new_release_published == 'true'
+    uses: ./.github/workflows/docker.yml
+    with:
+      image_tag: ${{ needs.release.outputs.new_release_version }}
+      cache_tag: ${{ github.sha }}
+    secrets: inherit
 
   docs:
-    needs: [lint, ci-gnu, ci-spack, docker-develop, release]
+    needs: [lint, ci-gnu, ci-spack, release, docker-develop, docker-release]
+    if: |
+      always() &&
+      needs.lint.result == 'success' &&
+      needs.ci-gnu.result == 'success' &&
+      needs.ci-spack.result == 'success' &&
+      needs.docker-develop.result == 'success' &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (needs.docker-release.result == 'success' || needs.docker-release.result == 'skipped')
     uses: ./.github/workflows/docs.yml

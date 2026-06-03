@@ -2,6 +2,13 @@ name: Semantic Release
 
 on:
   workflow_call:
+    outputs:
+      new_release_version:
+        description: "The version of the new release"
+        value: ${{ jobs.release.outputs.new_release_version }}
+      new_release_published:
+        description: "Whether a new release was published"
+        value: ${{ jobs.release.outputs.new_release_published }}
   workflow_dispatch:
 
 jobs:
@@ -11,6 +18,9 @@ jobs:
     permissions:
       id-token: write
       contents: write
+    outputs:
+      new_release_version: ${{ steps.release.outputs.new_version }}
+      new_release_published: ${{ steps.release.outputs.released }}
 
     steps:
       - name: Checkout
@@ -20,5 +30,6 @@ jobs:
 
       - name: Python Semantic Release
         uses: python-semantic-release/python-semantic-release@v9.11.0
+        id: release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
