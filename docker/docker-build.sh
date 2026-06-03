@@ -19,7 +19,7 @@ set -eux
 docker buildx build \
   --no-cache \
   --platform linux/amd64 \
-  -t deckyfre/catchem:0.0.2 \
+  -t deckyfre/catchem:0.0.4 \
   -t deckyfre/catchem:latest \
   -f Dockerfile \
   ..

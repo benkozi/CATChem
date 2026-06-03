@@ -49,8 +49,10 @@ jobs:
           # Determine the tag to use
           if [ -n "${{ inputs.image_tag }}" ]; then
             echo "TAG=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+            echo "IS_RELEASE=true" >> "$GITHUB_OUTPUT"
           else
-            echo "TAG=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+            echo "TAG=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+            echo "IS_RELEASE=false" >> "$GITHUB_OUTPUT"
           fi
           
           # Determine the cache tag
@@ -78,7 +80,7 @@ jobs:
 
       # 6. Build and push Spack Base image
       - name: Build and push Spack Base image
-        if: steps.filter.outputs.base == 'true'
+        if: steps.filter.outputs.base == 'true' || steps.meta.outputs.IS_RELEASE == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -86,7 +88,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
             ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-to: type=inline
@@ -100,7 +102,7 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
           cache-from: |
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.CACHE_TAG }}
