@@ -25,17 +25,21 @@ jobs:
   ci-spack:
     uses: ./.github/workflows/spack-stack.yml
 
+  docker-develop:
+    uses: ./.github/workflows/docker.yml
+
   release:
-    needs: [lint, ci-gnu, ci-spack]
+    needs: [lint, ci-gnu, ci-spack, docker-develop]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/semantic-release.yml
 
   docs:
-    needs: [lint, ci-gnu, ci-spack, release]
+    needs: [lint, ci-gnu, ci-spack, release, docker-develop]
     if: |
       always() &&
       needs.lint.result == 'success' &&
       needs.ci-gnu.result == 'success' &&
       needs.ci-spack.result == 'success' &&
+      needs.docker-develop.result == 'success' &&
       (needs.release.result == 'success' || needs.release.result == 'skipped')
     uses: ./.github/workflows/docs.yml

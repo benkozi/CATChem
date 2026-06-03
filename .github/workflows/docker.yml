@@ -1,11 +1,8 @@
 name: Build, Test and Push Docker Image
 
 on:
-  push:
-#    branches: [main]
-  pull_request:
-#    branches: [main]
-#    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
   build-test-push:
@@ -100,7 +97,7 @@ jobs:
           file: ./docker/Dockerfile-Spack-Base
           push: true
           platforms: linux/amd64
-          tags: | 
+          tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:0.0.4
             ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-from: |
@@ -128,4 +125,3 @@ jobs:
 #            type=local,src=/tmp/.buildx-cache
 #            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
 #          cache-to: type=inline
-
