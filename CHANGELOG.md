@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.1.2-rc.3 (2026-06-03)
+
+### Fixes
+
+* fix: try tag only for production ([`19215cd`](https://github.com/benkozi/CATChem/commit/19215cd2c6668d56e551942fcf014d3b529a72c9))
+
+
 ## v0.1.2-rc.2 (2026-06-03)
 
 ### Chores
