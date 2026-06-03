@@ -55,5 +55,5 @@ version_variables = []
 branches = { main = { match = "main" }, test = { match = "feature/container-build" } }
 upload_to_pypi = false
 build_command = ""
-vcs_release = false
+#vcs_release = false
 
