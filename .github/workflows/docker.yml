@@ -2,24 +2,56 @@ name: Build, Test and Push Docker Image
 
 on:
   workflow_dispatch:
-  workflow_call:
     inputs:
-      image_tag:
+      tag:
         description: 'The tag to use for the Docker image'
-        required: false
+        required: true
         type: string
       cache_tag:
         description: 'The tag to use for cache-from'
+        required: true
+        type: string
+      is_release:
+        description: 'Whether this is a release build'
         required: false
+        type: boolean
+        default: false
+      base_project_name:
+        description: 'The base project name'
+        required: true
+        type: string
+      project_name:
+        description: 'The project name'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: 'The tag to use for the Docker image'
+        required: true
+        type: string
+      cache_tag:
+        description: 'The tag to use for cache-from'
+        required: true
+        type: string
+      is_release:
+        description: 'Whether this is a release build'
+        required: false
+        type: boolean
+        default: false
+      base_project_name:
+        description: 'The base project name'
+        required: true
+        type: string
+      project_name:
+        description: 'The project name'
+        required: true
         type: string
 
 jobs:
   build-test-push:
     name: Build, Test and Push Docker Image
     runs-on: ubuntu-latest
-    env:
-      BASE_PROJECT_NAME: ${{ inputs.image_tag != '' && secrets.DOCKERHUB_BASE_PROJECT_NAME || secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}
-      PROJECT_NAME: ${{ inputs.image_tag != '' && secrets.DOCKERHUB_PROJECT_NAME || secrets.DOCKERHUB_PROJECT_NAME_DEV }}
 
     steps:
       # 1. Checkout source code
@@ -41,32 +73,7 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: ${{ runner.os }}-buildx-
 
-      # 4. Extract metadata
-      - name: Extract metadata
-        id: meta
-        run: |
-          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_OUTPUT"
-          SHORT_SHA=${GITHUB_SHA::7}
-          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-
-          # Determine the tag to use
-          if [ -n "${{ inputs.image_tag }}" ]; then
-            echo "TAG=${{ inputs.image_tag }}" >> "$GITHUB_OUTPUT"
-            echo "IS_RELEASE=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "TAG=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-            echo "IS_RELEASE=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Determine the cache tag
-          if [ -n "${{ inputs.cache_tag }}" ]; then
-            RAW_CACHE_TAG="${{ inputs.cache_tag }}"
-            echo "CACHE_TAG=${RAW_CACHE_TAG::7}" >> "$GITHUB_OUTPUT"
-          else
-            echo "CACHE_TAG=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          fi
-
-      # 5. Log in to Docker Hub
+      # 4. Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -83,7 +90,7 @@ jobs:
 
       # 6. Build and push Spack Base image
       - name: Build and push Spack Base image
-        if: steps.filter.outputs.base == 'true' || steps.meta.outputs.IS_RELEASE == 'true'
+        if: steps.filter.outputs.base == 'true' || inputs.is_release == true
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -91,8 +98,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:latest
           cache-to: type=inline
 
       # 7. Build and push production image
@@ -104,8 +111,8 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ steps.meta.outputs.TAG }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ steps.meta.outputs.CACHE_TAG }}
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
           cache-to: type=inline

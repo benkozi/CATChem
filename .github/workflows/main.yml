@@ -16,6 +16,14 @@ permissions:
   id-token: write
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
   lint:
     uses: ./.github/workflows/lint.yml
 
@@ -26,7 +34,14 @@ jobs:
     uses: ./.github/workflows/spack-stack.yml
 
   docker-develop:
+    needs: [setup]
     uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.setup.outputs.short_sha }}
+      cache_tag: ${{ needs.setup.outputs.short_sha }}
+      is_release: false
+      base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}
+      project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME_DEV }}
     secrets: inherit
 
   release:
@@ -36,12 +51,15 @@ jobs:
     secrets: inherit
 
   docker-release:
-    needs: [release]
+    needs: [release, setup]
     if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker.yml
     with:
-      image_tag: ${{ needs.release.outputs.new_release_version }}
-      cache_tag: ${{ github.sha }}
+      tag: ${{ needs.release.outputs.new_release_version }}
+      cache_tag: ${{ needs.setup.outputs.short_sha }}
+      is_release: true
+      base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}
+      project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME }}
     secrets: inherit
 
   docs:
