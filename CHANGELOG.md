@@ -181,6 +181,10 @@ Closes #157 ([`e47a361`](https://github.com/benkozi/CATChem/commit/e47a361559293
 
 ### Fixes
 
+* fix: try ci ([`0ab782a`](https://github.com/benkozi/CATChem/commit/0ab782ac55a65d05dc2ba8715d778b1c39bcf991))
+
+* fix: try ci ([`93c4fc6`](https://github.com/benkozi/CATChem/commit/93c4fc63b3f4f7538061981481534304f0ffeec2))
+
 * fix: try ci ([`d032e0e`](https://github.com/benkozi/CATChem/commit/d032e0e97c36bc6aab221eebf10d98cf7762ca3d))
 
 * fix: try ci ([`e294999`](https://github.com/benkozi/CATChem/commit/e294999b0fc627a712667ab077d1b6af86262f75))
