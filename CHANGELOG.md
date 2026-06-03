@@ -1,9 +1,22 @@
 # CHANGELOG
 
 
-## v0.1.1 (2026-06-03)
+## v0.1.2-rc.1 (2026-06-03)
 
 ### Fixes
+
+* fix: try branch-level configuration ([`a523176`](https://github.com/benkozi/CATChem/commit/a523176c0dec816103afafabba062c5d8d6b546d))
+
+
+## v0.1.1 (2026-06-03)
+
+### Chores
+
+* chore: builds and pushes ([`1771eab`](https://github.com/benkozi/CATChem/commit/1771eab6a37fe6a7c962d2f57b7ccc491fce53a1))
+
+### Fixes
+
+* fix: try branch-level configuration ([`498d25c`](https://github.com/benkozi/CATChem/commit/498d25cf370d1e4eeee0fffc9cbfc7a9a50facdb))
 
 * fix: try docker release ([`969b68d`](https://github.com/benkozi/CATChem/commit/969b68d9fa20e238d0b27d8b71064150c2f6a893))
 
