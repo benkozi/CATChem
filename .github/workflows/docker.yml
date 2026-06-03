@@ -67,7 +67,6 @@ jobs:
 
       # 5. Build and push Spack Base image
       - name: Build and push Spack Base image
-        if: steps.filter.outputs.base == 'true' || inputs.is_release == true
         uses: docker/build-push-action@v7
         with:
           context: .

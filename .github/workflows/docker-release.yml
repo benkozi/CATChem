@@ -1,4 +1,54 @@
-name: docker-release.yml
+name: Docker Release
+
 on:
+  workflow_call:
+    inputs:
+      release_version:
+        required: true
+        type: string
+      short_sha:
+        required: true
+        type: string
+      base_project_name:
+        required: true
+        type: string
+      project_name:
+        required: true
+        type: string
+      base_dev_project_name:
+        required: true
+        type: string
+      dev_project_name:
+        required: true
+        type: string
 
 jobs:
+  retag-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Retag and push Spack Base image
+        run: |
+          DEV_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_dev_project_name }}:${{ inputs.short_sha }}"
+          REL_IMAGE_VER="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}"
+          REL_IMAGE_LATEST="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:latest"
+
+          echo "Retagging $DEV_IMAGE as $REL_IMAGE_VER and $REL_IMAGE_LATEST"
+          docker buildx imagetools create -t "$REL_IMAGE_VER" -t "$REL_IMAGE_LATEST" "$DEV_IMAGE"
+
+      - name: Retag and push Production image
+        run: |
+          DEV_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ inputs.dev_project_name }}:${{ inputs.short_sha }}"
+          REL_IMAGE_VER="${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.release_version }}"
+          REL_IMAGE_LATEST="${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:latest"
+
+          echo "Retagging $DEV_IMAGE as $REL_IMAGE_VER and $REL_IMAGE_LATEST"
+          docker buildx imagetools create -t "$REL_IMAGE_VER" -t "$REL_IMAGE_LATEST" "$DEV_IMAGE"

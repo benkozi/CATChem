@@ -57,11 +57,7 @@ build_command = ""
 [tool.semantic_release.branches.main]
 match = "main"
 prerelease = false
-vcs_release = true
-changelog = true
 
-[tool.semantic_release.branches.tester]
+[tool.semantic_release.branches.develop]
 match = "feature/container-build"
 prerelease = true
-vcs_release = false
-changelog = false
