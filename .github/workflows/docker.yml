@@ -46,6 +46,12 @@ on:
       project_name:
         description: 'The project name'
         required: true
+      DOCKER_USERNAME:
+        description: 'Docker Hub username'
+        required: true
+      DOCKERHUB_TOKEN:
+        description: 'Docker Hub token'
+        required: true
 
 jobs:
   build-test-push:
