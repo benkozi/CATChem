@@ -3,7 +3,15 @@ cmake_minimum_required(VERSION 3.21)
 # Extract version from pyproject.toml
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml" PYPROJECT_TOML)
 string(REGEX MATCH "version = \"([^\"]+)\"" _ ${PYPROJECT_TOML})
-set(CATCHEM_VERSION ${CMAKE_MATCH_1})
+set(CATCHEM_VERSION_FULL ${CMAKE_MATCH_1})
+
+# CMake project() VERSION requires numeric format: major[.minor[.patch[.tweak]]]
+# We strip any semver suffixes (like -rc.1) for the project command.
+if(CATCHEM_VERSION_FULL MATCHES "^([0-9]+(\\.[0-9]+)*)")
+  set(CATCHEM_VERSION "${CMAKE_MATCH_1}")
+else()
+  set(CATCHEM_VERSION "0.0.0")
+endif()
 
 project(CATChem VERSION ${CATCHEM_VERSION} LANGUAGES Fortran C CXX)
 
