@@ -33,3 +33,4 @@ jobs:
         id: release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          vcs_release: false

@@ -53,6 +53,4 @@ version_variables = []
 branches = { main = { match = "main" }, test = { match = "feature/container-build" } }
 upload_to_pypi = false
 build_command = ""
-
-[tool.semantic_release.publish]
-upload_to_vcs_release = false
+vcs_release = false
