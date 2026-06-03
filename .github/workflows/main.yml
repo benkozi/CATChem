@@ -48,7 +48,7 @@ jobs:
 
   release:
     needs: [lint, ci-gnu, ci-spack, docker-develop]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push'
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
 
