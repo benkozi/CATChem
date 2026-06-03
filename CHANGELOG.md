@@ -1,66 +1,15 @@
 # CHANGELOG
 
 
-## v0.1.2-rc.3 (2026-06-03)
-
-### Fixes
-
-* fix: try tag only for production ([`19215cd`](https://github.com/benkozi/CATChem/commit/19215cd2c6668d56e551942fcf014d3b529a72c9))
-
-
-## v0.1.2-rc.2 (2026-06-03)
-
-### Chores
-
-* chore: merge ([`94ee8ce`](https://github.com/benkozi/CATChem/commit/94ee8ce16a5e03f45be308b6308ca5ee85db011a))
-
-### Fixes
-
-* fix: try tag only for production ([`035fad4`](https://github.com/benkozi/CATChem/commit/035fad4c956c915565f1a6bdd2b80452163a5d27))
-
-
-## v0.1.2-rc.1 (2026-06-03)
-
-### Fixes
-
-* fix: only tag in the release job ([`9e3fe51`](https://github.com/benkozi/CATChem/commit/9e3fe5186eb4ec13b3e3319e84bea73bcaf14b09))
-
-* fix: only tag in the release job ([`3012bac`](https://github.com/benkozi/CATChem/commit/3012bac3efd9d663bad2949118c6f6176274f8a4))
-
-* fix: try branch-level configuration ([`a523176`](https://github.com/benkozi/CATChem/commit/a523176c0dec816103afafabba062c5d8d6b546d))
-
-
-## v0.1.1 (2026-06-03)
-
-### Chores
-
-* chore: builds and pushes ([`1771eab`](https://github.com/benkozi/CATChem/commit/1771eab6a37fe6a7c962d2f57b7ccc491fce53a1))
-
-### Fixes
-
-* fix: try branch-level configuration ([`498d25c`](https://github.com/benkozi/CATChem/commit/498d25cf370d1e4eeee0fffc9cbfc7a9a50facdb))
-
-* fix: try docker release ([`969b68d`](https://github.com/benkozi/CATChem/commit/969b68d9fa20e238d0b27d8b71064150c2f6a893))
-
-* fix: try docker release ([`2fcf70f`](https://github.com/benkozi/CATChem/commit/2fcf70f0932c3920b98fb982b8c98c7d1b8fadde))
-
-
 ## v0.1.0 (2026-06-03)
 
-### Fixes
+### Chores
 
-* fix: try docker release ([`7c8ad16`](https://github.com/benkozi/CATChem/commit/7c8ad1630587d28e5bb65ab07ac77064391c1292))
+* chore: only release images with new tag and simplify docs logic ([`bfa34e8`](https://github.com/benkozi/CATChem/commit/bfa34e8d89a1283142b6b734f6e387cf7ab30c15))
 
+### Features
 
-## v0.1.0-rc.2 (2026-06-03)
-
-### Fixes
-
-* fix: try docker release ([`a01e0c1`](https://github.com/benkozi/CATChem/commit/a01e0c14d825c5c601ca7c8ec37e04fa2d51f2a6))
-
-* fix: try docker release ([`d707de3`](https://github.com/benkozi/CATChem/commit/d707de32c6b660d1aa8456afdfcb5f135830d9a5))
-
-* fix: try docker release ([`5cc727b`](https://github.com/benkozi/CATChem/commit/5cc727bb07581ae699f21a3065d12ff759a9d602))
+* feat: trigger release with changelog and push to main docker repo ([`febbbe6`](https://github.com/benkozi/CATChem/commit/febbbe6f293376efd581e666e8893eeb25769bf5))
 
 
 ## v0.1.0-rc.1 (2026-06-03)
@@ -96,6 +45,10 @@
 - Update yaml_interface comment to reflect yaml-cpp availability from earlier build step ([`32c7e13`](https://github.com/benkozi/CATChem/commit/32c7e13edaadcaaf6aaaad2e5624bf4bc035df44))
 
 ### Chores
+
+* chore: merge ([`94ee8ce`](https://github.com/benkozi/CATChem/commit/94ee8ce16a5e03f45be308b6308ca5ee85db011a))
+
+* chore: builds and pushes ([`1771eab`](https://github.com/benkozi/CATChem/commit/1771eab6a37fe6a7c962d2f57b7ccc491fce53a1))
 
 * chore: dev v release builds ([`84aa80e`](https://github.com/benkozi/CATChem/commit/84aa80e4a238db56129bd4311c13f8e3386e56cd))
 
@@ -242,6 +195,38 @@ Closes #157 ([`e47a361`](https://github.com/benkozi/CATChem/commit/e47a361559293
 * feat:  added list of models, additional checks in the yaml to improve interpretation ([`9034f92`](https://github.com/benkozi/CATChem/commit/9034f9280105b70f915285db4d6951a1c9da1728))
 
 ### Fixes
+
+* fix: publish to correct repos ([`bed5514`](https://github.com/benkozi/CATChem/commit/bed55145f5d0abba13887c7c7d25cfabe8064df5))
+
+* fix: try tag only for production ([`2843edd`](https://github.com/benkozi/CATChem/commit/2843edded9f70faab1b0bc26131b39d024a39422))
+
+* fix: try tag only for production ([`b51404b`](https://github.com/benkozi/CATChem/commit/b51404b2fe652176ffbcaa59d64c5cd19ee09a70))
+
+* fix: try tag only for production ([`0ff0e9d`](https://github.com/benkozi/CATChem/commit/0ff0e9d4e39ff40d074e40f537beda6fbffae37b))
+
+* fix: try tag only for production ([`19215cd`](https://github.com/benkozi/CATChem/commit/19215cd2c6668d56e551942fcf014d3b529a72c9))
+
+* fix: try tag only for production ([`035fad4`](https://github.com/benkozi/CATChem/commit/035fad4c956c915565f1a6bdd2b80452163a5d27))
+
+* fix: only tag in the release job ([`9e3fe51`](https://github.com/benkozi/CATChem/commit/9e3fe5186eb4ec13b3e3319e84bea73bcaf14b09))
+
+* fix: only tag in the release job ([`3012bac`](https://github.com/benkozi/CATChem/commit/3012bac3efd9d663bad2949118c6f6176274f8a4))
+
+* fix: try branch-level configuration ([`a523176`](https://github.com/benkozi/CATChem/commit/a523176c0dec816103afafabba062c5d8d6b546d))
+
+* fix: try branch-level configuration ([`498d25c`](https://github.com/benkozi/CATChem/commit/498d25cf370d1e4eeee0fffc9cbfc7a9a50facdb))
+
+* fix: try docker release ([`969b68d`](https://github.com/benkozi/CATChem/commit/969b68d9fa20e238d0b27d8b71064150c2f6a893))
+
+* fix: try docker release ([`2fcf70f`](https://github.com/benkozi/CATChem/commit/2fcf70f0932c3920b98fb982b8c98c7d1b8fadde))
+
+* fix: try docker release ([`7c8ad16`](https://github.com/benkozi/CATChem/commit/7c8ad1630587d28e5bb65ab07ac77064391c1292))
+
+* fix: try docker release ([`a01e0c1`](https://github.com/benkozi/CATChem/commit/a01e0c14d825c5c601ca7c8ec37e04fa2d51f2a6))
+
+* fix: try docker release ([`d707de3`](https://github.com/benkozi/CATChem/commit/d707de32c6b660d1aa8456afdfcb5f135830d9a5))
+
+* fix: try docker release ([`5cc727b`](https://github.com/benkozi/CATChem/commit/5cc727bb07581ae699f21a3065d12ff759a9d602))
 
 * fix: try ci ([`190a325`](https://github.com/benkozi/CATChem/commit/190a32507f8f9564b69f679cf182838acd166ec3))
 
