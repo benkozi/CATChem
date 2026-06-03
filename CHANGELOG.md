@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.2 (2026-06-03)
+
+### Fixes
+
+* fix: try docker release ([`d707de3`](https://github.com/benkozi/CATChem/commit/d707de32c6b660d1aa8456afdfcb5f135830d9a5))
+
+* fix: try docker release ([`5cc727b`](https://github.com/benkozi/CATChem/commit/5cc727bb07581ae699f21a3065d12ff759a9d602))
+
+
 ## v0.1.0-rc.1 (2026-06-03)
 
 ### Build System
