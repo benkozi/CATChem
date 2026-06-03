@@ -55,11 +55,8 @@ on:
 
 jobs:
   build-test-push:
-    name: Build, Test and Push Docker Image
+#    name: Build, Test and Push Docker Image
     runs-on: ubuntu-latest
-    env:
-      BASE_PROJECT_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.base_project_name || secrets.base_project_name }}
-      PROJECT_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.project_name || secrets.project_name }}
 
     steps:
       # 1. Checkout source code
@@ -106,7 +103,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ inputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.BASE_PROJECT_NAME }}:${{ inputs.tag }}
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-to: type=inline
 
@@ -119,9 +116,9 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ inputs.tag }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ inputs.tag }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.BASE_PROJECT_NAME }}:${{ inputs.tag }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.PROJECT_NAME }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ inputs.cache_tag }}
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.PROJECT_NAME }}:${{ inputs.cache_tag }}
           cache-to: type=inline
 
