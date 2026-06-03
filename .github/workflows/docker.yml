@@ -1,29 +1,6 @@
 name: Build, Test and Push Docker Image
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'The tag to use for the Docker image'
-        required: true
-        type: string
-      cache_tag:
-        description: 'The tag to use for cache-from'
-        required: true
-        type: string
-      is_release:
-        description: 'Whether this is a release build'
-        required: false
-        type: boolean
-        default: false
-      base_project_name:
-        description: 'The base project name (manual override)'
-        required: false
-        type: string
-      project_name:
-        description: 'The project name (manual override)'
-        required: false
-        type: string
   workflow_call:
     inputs:
       tag:
@@ -103,8 +80,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.BASE_PROJECT_NAME }}:${{ inputs.tag }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.base_project_name }}:${{ inputs.tag }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.base_project_name }}:latest
           cache-to: type=inline
 
       # 6. Build and push production image
@@ -116,9 +93,9 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.BASE_PROJECT_NAME }}:${{ inputs.tag }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.PROJECT_NAME }}:${{ inputs.tag }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ secrets.base_project_name }}:${{ inputs.tag }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.project_name }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.PROJECT_NAME }}:${{ inputs.cache_tag }}
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.project_name }}:${{ inputs.cache_tag }}
           cache-to: type=inline
 
