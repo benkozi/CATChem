@@ -40,8 +40,8 @@ jobs:
       tag: ${{ needs.setup.outputs.short_sha }}
       cache_tag: ${{ needs.setup.outputs.short_sha }}
       is_release: false
-      base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}
-      project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME_DEV }}
+      base_project_name: catchem-spack-base-dev
+      project_name: catchem-dev
 
   release:
     needs: [lint, ci-gnu, ci-spack, docker-develop]
@@ -57,8 +57,8 @@ jobs:
       tag: ${{ needs.release.outputs.new_release_version }}
       cache_tag: ${{ needs.setup.outputs.short_sha }}
       is_release: true
-      base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}
-      project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME }}
+      base_project_name: catchem-spack-base
+      project_name: catchem
 
   docs:
     needs: [lint, ci-gnu, ci-spack, release, docker-develop, docker-release]
