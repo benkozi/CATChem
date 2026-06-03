@@ -27,6 +27,7 @@ jobs:
 
   docker-develop:
     uses: ./.github/workflows/docker.yml
+    secrets: inherit
 
   release:
     needs: [lint, ci-gnu, ci-spack, docker-develop]
