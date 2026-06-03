@@ -50,6 +50,15 @@ jobs:
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
 
+  debug-release-outputs:
+    needs: [release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo Release Outputs
+        run: |
+          echo "New release published: ${{ needs.release.outputs.new_release_published }}"
+          echo "New release version: ${{ needs.release.outputs.new_release_version }}"
+
   docker-release:
     needs: [release, setup]
     #if: needs.release.outputs.new_release_published == 'true'
