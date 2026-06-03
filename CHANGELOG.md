@@ -1,9 +1,24 @@
 # CHANGELOG
 
 
+## v0.1.2-rc.2 (2026-06-03)
+
+### Chores
+
+* chore: merge ([`94ee8ce`](https://github.com/benkozi/CATChem/commit/94ee8ce16a5e03f45be308b6308ca5ee85db011a))
+
+### Fixes
+
+* fix: try tag only for production ([`035fad4`](https://github.com/benkozi/CATChem/commit/035fad4c956c915565f1a6bdd2b80452163a5d27))
+
+
 ## v0.1.2-rc.1 (2026-06-03)
 
 ### Fixes
+
+* fix: only tag in the release job ([`9e3fe51`](https://github.com/benkozi/CATChem/commit/9e3fe5186eb4ec13b3e3319e84bea73bcaf14b09))
+
+* fix: only tag in the release job ([`3012bac`](https://github.com/benkozi/CATChem/commit/3012bac3efd9d663bad2949118c6f6176274f8a4))
 
 * fix: try branch-level configuration ([`a523176`](https://github.com/benkozi/CATChem/commit/a523176c0dec816103afafabba062c5d8d6b546d))
 
