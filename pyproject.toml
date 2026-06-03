@@ -60,4 +60,4 @@ prerelease = false
 
 [tool.semantic_release.branches.develop]
 match = "feature/container-build"
-prerelease = true
+prerelease = false
