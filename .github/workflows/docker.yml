@@ -107,7 +107,7 @@ jobs:
           platforms: linux/amd64
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ inputs.tag }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}:latest
           cache-to: type=inline
 
       # 6. Build and push production image
