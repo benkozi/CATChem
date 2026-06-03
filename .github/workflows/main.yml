@@ -40,9 +40,11 @@ jobs:
       tag: ${{ needs.setup.outputs.short_sha }}
       cache_tag: ${{ needs.setup.outputs.short_sha }}
       is_release: false
+    secrets:
       base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME_DEV }}
       project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME_DEV }}
-    secrets: inherit
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   release:
     needs: [lint, ci-gnu, ci-spack, docker-develop]
@@ -58,9 +60,11 @@ jobs:
       tag: ${{ needs.release.outputs.new_release_version }}
       cache_tag: ${{ needs.setup.outputs.short_sha }}
       is_release: true
+    secrets:
       base_project_name: ${{ secrets.DOCKERHUB_BASE_PROJECT_NAME }}
       project_name: ${{ secrets.DOCKERHUB_PROJECT_NAME }}
-    secrets: inherit
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   docs:
     needs: [lint, ci-gnu, ci-spack, release, docker-develop, docker-release]

@@ -17,12 +17,12 @@ on:
         type: boolean
         default: false
       base_project_name:
-        description: 'The base project name'
-        required: true
+        description: 'The base project name (manual override)'
+        required: false
         type: string
       project_name:
-        description: 'The project name'
-        required: true
+        description: 'The project name (manual override)'
+        required: false
         type: string
   workflow_call:
     inputs:
@@ -39,19 +39,21 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
       base_project_name:
         description: 'The base project name'
         required: true
-        type: string
       project_name:
         description: 'The project name'
         required: true
-        type: string
 
 jobs:
   build-test-push:
     name: Build, Test and Push Docker Image
     runs-on: ubuntu-latest
+    env:
+      BASE_PROJECT_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.base_project_name || secrets.base_project_name }}
+      PROJECT_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.project_name || secrets.project_name }}
 
     steps:
       # 1. Checkout source code
@@ -88,7 +90,7 @@ jobs:
             base:
               - 'docker/Dockerfile-Spack-Base'
 
-      # 6. Build and push Spack Base image
+      # 5. Build and push Spack Base image
       - name: Build and push Spack Base image
         if: steps.filter.outputs.base == 'true' || inputs.is_release == true
         uses: docker/build-push-action@v7
@@ -98,11 +100,11 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ inputs.tag }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:latest
           cache-to: type=inline
 
-      # 7. Build and push production image
+      # 6. Build and push production image
       - name: Build and push production image
         uses: docker/build-push-action@v7
         with:
@@ -111,8 +113,9 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.tag }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ env.BASE_PROJECT_NAME }}:${{ inputs.tag }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ inputs.cache_tag }}
           cache-to: type=inline
+
