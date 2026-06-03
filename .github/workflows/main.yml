@@ -58,6 +58,7 @@ jobs:
         run: |
           echo "New release published: ${{ needs.release.outputs.new_release_published }}"
           echo "New release version: ${{ needs.release.outputs.new_release_version }}"
+          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
 
   docker-release:
     needs: [release, setup]
@@ -65,8 +66,8 @@ jobs:
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
       short_sha: ${{ needs.setup.outputs.short_sha }}
-      base_project_name: catchem-spack-base
-      project_name: catchem
+      base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
+      project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
       base_dev_project_name: catchem-spack-base-dev
       dev_project_name: catchem-dev
     secrets: inherit
