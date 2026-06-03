@@ -1,7 +1,7 @@
 # CHANGELOG
 
 
-## v0.1.0 (2026-06-03)
+## v0.1.0-rc.1 (2026-06-03)
 
 ### Build System
 
@@ -180,6 +180,16 @@ Closes #157 ([`e47a361`](https://github.com/benkozi/CATChem/commit/e47a361559293
 * feat:  added list of models, additional checks in the yaml to improve interpretation ([`9034f92`](https://github.com/benkozi/CATChem/commit/9034f9280105b70f915285db4d6951a1c9da1728))
 
 ### Fixes
+
+* fix: try ci ([`190a325`](https://github.com/benkozi/CATChem/commit/190a32507f8f9564b69f679cf182838acd166ec3))
+
+* fix: try ci ([`2d70199`](https://github.com/benkozi/CATChem/commit/2d701993a730d7b5331dd746d75233f27683d872))
+
+* fix: try ci ([`8758991`](https://github.com/benkozi/CATChem/commit/8758991fc50908e68040cc74d7119696beea8a32))
+
+* fix: try ci ([`325867b`](https://github.com/benkozi/CATChem/commit/325867bca7fc7a7e5fa8ee5c21aa0f2b8ff90650))
+
+* fix: try ci ([`1875adf`](https://github.com/benkozi/CATChem/commit/1875adfa31255e1005fa0094d6ce7505e23d4b29))
 
 * fix: try ci ([`0ab782a`](https://github.com/benkozi/CATChem/commit/0ab782ac55a65d05dc2ba8715d778b1c39bcf991))
 
