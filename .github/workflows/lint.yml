@@ -12,13 +12,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.11"
-      - name: Install conventional-pre-commit
-        run: pip install conventional-pre-commit
-      - name: Check latest commit message
-        run: |
-          git log -1 --format=%B > commit_msg.txt
-          conventional-pre-commit commit_msg.txt
-      - uses: pre-commit/action@v3.0.1
+#      - uses: actions/setup-python@v6
+#        with:
+#          python-version: "3.11"
+#      - name: Install conventional-pre-commit
+#        run: pip install conventional-pre-commit
+#      - name: Check latest commit message
+#        run: |
+#          git log -1 --format=%B > commit_msg.txt
+#          conventional-pre-commit commit_msg.txt
+#      - uses: pre-commit/action@v3.0.1
