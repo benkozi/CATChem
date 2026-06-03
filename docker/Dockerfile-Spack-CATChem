@@ -1,0 +1,36 @@
+FROM deckyfre/catchem-spack-base:latest
+
+WORKDIR /opt/catchem/spack-stack
+
+ENV CACHE_BUST=1
+RUN <<INSTALL_ALL
+  set -eu
+
+  pushd repos/builtin
+#  git remote add benkozi https://github.com/benkozi/spack-packages/
+  git fetch benkozi
+  git checkout cece-cice-test-benkozi-2
+  git log -1
+  popd
+
+  . ./setup.sh
+
+  spack config add "packages:catchem:require:+mpi+nuopc^openmpi"
+
+  spack env create catchem-installed
+  spack env activate catchem-installed
+#  spack env activate catchem
+  spack add catchem@gcafs
+  spack concretize
+  spack install --fail-fast
+  spack gc -y
+  spack clean --all
+INSTALL_ALL
+
+RUN cat <<EOF >> ~/.bashrc
+source /opt/catchem/spack-stack/setup.sh
+# Use the spack function to activate, which handles PS1 updates
+spack env activate catchem-installed
+EOF
+
+CMD ["/bin/bash"]
