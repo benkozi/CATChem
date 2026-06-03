@@ -62,13 +62,14 @@ jobs:
   docker-release:
     needs: [release, setup]
     if: needs.release.outputs.new_release_published == 'true'
-    uses: ./.github/workflows/docker.yml
+    uses: ./.github/workflows/docker-release.yml
     with:
-      tag: ${{ needs.release.outputs.new_release_version }}
-      cache_tag: ${{ needs.setup.outputs.short_sha }}
-      is_release: true
+      release_version: ${{ needs.release.outputs.new_release_version }}
+      short_sha: ${{ needs.setup.outputs.short_sha }}
       base_project_name: catchem-spack-base
       project_name: catchem
+      base_dev_project_name: catchem-spack-base-dev
+      dev_project_name: catchem-dev
     secrets: inherit
 
   docs:
