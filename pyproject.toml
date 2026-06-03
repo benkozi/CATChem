@@ -37,12 +37,6 @@ dev = [
     "mypy",
 ]
 
-
-
-
-
-
-
 [tool.setuptools]
 packages = []
 
