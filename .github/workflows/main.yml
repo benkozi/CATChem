@@ -61,7 +61,6 @@ jobs:
 
   docker-release:
     needs: [release, setup]
-    if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}

@@ -9,6 +9,9 @@ on:
       new_release_published:
         description: "Whether a new release was published"
         value: ${{ jobs.release.outputs.new_release_published }}
+      is_prelease:
+        description: "Whether this is a pre-release"
+        value: ${{ jobs.release.outputs.is_prelease }}
 
 jobs:
   release:
@@ -20,6 +23,7 @@ jobs:
     outputs:
       new_release_version: ${{ steps.release.outputs.version }}
       new_release_published: ${{ steps.release.outputs.released }}
+      is_prelease: ${{ steps.release.outputs.is_prelease }}
 
     steps:
       - name: Checkout
@@ -32,5 +36,3 @@ jobs:
         id: release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-#          vcs_release: false
-#          prerelease: true
