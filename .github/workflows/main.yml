@@ -62,6 +62,7 @@ jobs:
 
   docker-release:
     needs: [release, setup]
+    if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
@@ -73,13 +74,5 @@ jobs:
     secrets: inherit
 
   docs:
-    needs: [lint, ci-gnu, ci-spack, release, docker-develop, docker-release]
-    if: |
-      always() &&
-      needs.lint.result == 'success' &&
-      needs.ci-gnu.result == 'success' &&
-      needs.ci-spack.result == 'success' &&
-      needs.docker-develop.result == 'success' &&
-      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
-      (needs.docker-release.result == 'success' || needs.docker-release.result == 'skipped')
+    needs: [lint, ci-gnu, ci-spack, release, docker-develop]
     uses: ./.github/workflows/docs.yml
