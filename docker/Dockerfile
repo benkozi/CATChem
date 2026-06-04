@@ -23,3 +23,11 @@ RUN source /opt/catchem/spack-stack/setup.sh && \
     make -j$(nproc) && \
     make install && \
     ctest --output-on-failure
+
+RUN cat <<EOF >> ~/.bashrc
+# enable spack env by default
+source /opt/catchem/spack-stack/setup.sh
+spack env activate catchem
+EOF
+
+CMD ["/bin/bash"]
