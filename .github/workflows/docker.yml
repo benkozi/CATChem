@@ -66,7 +66,7 @@ jobs:
               - 'docker/Dockerfile-Spack-Base'
 
       # 5. Build and push Spack Base image
-      - name: Build and push Spack Base image
+      - name: Spack Base image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -78,8 +78,8 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base:latest
           cache-to: type=inline
 
-      # 6. Build and push production image
-      - name: Build and push production image
+      # 6. Build and push CATChem image
+      - name: CATChem image
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -92,4 +92,3 @@ jobs:
           cache-from: |
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
           cache-to: type=inline
-
