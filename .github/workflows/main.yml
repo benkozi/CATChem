@@ -16,7 +16,7 @@ permissions:
   id-token: write
 
 jobs:
-  setup:
+  docker-setup:
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
@@ -34,11 +34,11 @@ jobs:
     uses: ./.github/workflows/spack-stack.yml
 
   docker-develop:
-    needs: [setup]
+    needs: [docker-setup]
     uses: ./.github/workflows/docker.yml
     with:
-      tag: ${{ needs.setup.outputs.short_sha }}
-      cache_tag: ${{ needs.setup.outputs.short_sha }}
+      tag: ${{ needs.docker-setup.outputs.short_sha }}
+      cache_tag: ${{ needs.docker-setup.outputs.short_sha }}
       is_release: false
       base_project_name: catchem-spack-base-dev
       project_name: catchem-dev
@@ -50,23 +50,23 @@ jobs:
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
 
-  debug-release-outputs:
-    needs: [release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Echo Release Outputs
-        run: |
-          echo "New release published: ${{ needs.release.outputs.new_release_published }}"
-          echo "New release version: ${{ needs.release.outputs.new_release_version }}"
-          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
+#  debug-release-outputs:
+#    needs: [release]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Echo Release Outputs
+#        run: |
+#          echo "New release published: ${{ needs.release.outputs.new_release_published }}"
+#          echo "New release version: ${{ needs.release.outputs.new_release_version }}"
+#          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
 
   docker-release:
-    needs: [release, setup]
+    needs: [release, docker-setup]
     if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-      short_sha: ${{ needs.setup.outputs.short_sha }}
+      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
       base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
       project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
       base_dev_project_name: catchem-spack-base-dev
