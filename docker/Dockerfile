@@ -30,4 +30,6 @@ source /opt/catchem/spack-stack/setup.sh
 spack env activate catchem
 EOF
 
+WORKDIR /opt
+
 CMD ["/bin/bash"]
