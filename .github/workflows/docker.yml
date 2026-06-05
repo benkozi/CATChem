@@ -24,10 +24,10 @@ on:
         description: 'The project name'
         required: true
         type: string
-#      short_sha:
-#        description: 'The short SHA of the commit'
-#        required: true
-#        type: string
+      short_sha:
+        description: 'The short SHA of the commit'
+        required: true
+        type: string
 
 jobs:
   build-test-push:
@@ -62,7 +62,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev-${{ inputs.short_sha }}
           cache-from: |
             type=gha,scope=spack-base
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-dev:latest
@@ -79,7 +79,7 @@ jobs:
           push: false
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev-${{ inputs.short_sha }}
           tags: ${{ inputs.project_name }}
           cache-from: |
             type=gha,scope=catchem

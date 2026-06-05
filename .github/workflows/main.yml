@@ -16,13 +16,13 @@ permissions:
   id-token: write
 
 jobs:
-#  docker-setup:
-#    runs-on: ubuntu-latest
-#    outputs:
-#      short_sha: ${{ steps.vars.outputs.short_sha }}
-#    steps:
-#      - id: vars
-#        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+  docker-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - id: vars
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
   lint:
     uses: ./.github/workflows/lint.yml
@@ -38,7 +38,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     with:
 #      tag: ${{ needs.docker-setup.outputs.short_sha }}
-#      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
+      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
 #      is_release: false
       base_project_name: catchem-spack-base-dev
       project_name: catchem-dev
@@ -66,7 +66,7 @@ jobs:
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-#      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
+      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
       base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
       project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
     secrets: inherit
