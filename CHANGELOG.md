@@ -1,18 +1,14 @@
 # CHANGELOG
 
 
-## v0.1.0 (2026-06-03)
+## v0.0.2-rc.1 (2026-06-05)
 
-### Chores
+### Fixes
 
-* chore: only release images with new tag and simplify docs logic ([`bfa34e8`](https://github.com/benkozi/CATChem/commit/bfa34e8d89a1283142b6b734f6e387cf7ab30c15))
-
-### Features
-
-* feat: trigger release with changelog and push to main docker repo ([`febbbe6`](https://github.com/benkozi/CATChem/commit/febbbe6f293376efd581e666e8893eeb25769bf5))
+* fix: test new pr (#5) ([`6430bec`](https://github.com/benkozi/CATChem/commit/6430bec0cc163d1436c8e513fea9020dd70c2c5c))
 
 
-## v0.1.0-rc.1 (2026-06-03)
+## v0.0.1 (2026-06-05)
 
 ### Build System
 
@@ -45,6 +41,16 @@
 - Update yaml_interface comment to reflect yaml-cpp availability from earlier build step ([`32c7e13`](https://github.com/benkozi/CATChem/commit/32c7e13edaadcaaf6aaaad2e5624bf4bc035df44))
 
 ### Chores
+
+* chore: change version [ci skip] ([`3dc2655`](https://github.com/benkozi/CATChem/commit/3dc26553125f88ba90aa204cf985d50721875f9c))
+
+* chore: add catchem env activation ([`172e6ad`](https://github.com/benkozi/CATChem/commit/172e6ad2dfe938ca00899c0d79cd47020b5641a2))
+
+* chore: add catchem env activation ([`3ba8eeb`](https://github.com/benkozi/CATChem/commit/3ba8eeb2904abb7ee3df5d826ad616f059729f9a))
+
+* chore: add catchem env activation ([`90678d1`](https://github.com/benkozi/CATChem/commit/90678d1ba2970d3b96783dec65233087d2a06b5e))
+
+* chore: only release images with new tag and simplify docs logic ([`bfa34e8`](https://github.com/benkozi/CATChem/commit/bfa34e8d89a1283142b6b734f6e387cf7ab30c15))
 
 * chore: merge ([`94ee8ce`](https://github.com/benkozi/CATChem/commit/94ee8ce16a5e03f45be308b6308ca5ee85db011a))
 
@@ -159,6 +165,8 @@ Co-authored-by: Zachary Moon <zachary.moon@noaa.gov> ([`e73ad6a`](https://github
 
 ### Features
 
+* feat: trigger release with changelog and push to main docker repo ([`febbbe6`](https://github.com/benkozi/CATChem/commit/febbbe6f293376efd581e666e8893eeb25769bf5))
+
 * feat: add docker job ([`b53e6aa`](https://github.com/benkozi/CATChem/commit/b53e6aa899d4ca23e45ab4eba9f7d9972c0ab750))
 
 * feat: add docker job ([`4213fce`](https://github.com/benkozi/CATChem/commit/4213fcefac881b6c02b8682568a40c7ce5bffb97))
@@ -195,6 +203,18 @@ Closes #157 ([`e47a361`](https://github.com/benkozi/CATChem/commit/e47a361559293
 * feat:  added list of models, additional checks in the yaml to improve interpretation ([`9034f92`](https://github.com/benkozi/CATChem/commit/9034f9280105b70f915285db4d6951a1c9da1728))
 
 ### Fixes
+
+* fix: change docker caching (#4) ([`1bde1e9`](https://github.com/benkozi/CATChem/commit/1bde1e978eb35e1cc3cb944ab76bfc470dbd8335))
+
+* fix: pre-release on dev branch (#3) ([`83171d7`](https://github.com/benkozi/CATChem/commit/83171d76919aa554926f3f5cfb3daec95a7d90fe))
+
+* fix: validate pr title (#2)
+
+* fix: enable ci run on build-dev
+
+* fix: add semantic pull request check
+
+* remove commit msg hook ([`ed8fad6`](https://github.com/benkozi/CATChem/commit/ed8fad6d48bff15af207cf80020dc06d123b83ab))
 
 * fix: publish to correct repos ([`bed5514`](https://github.com/benkozi/CATChem/commit/bed55145f5d0abba13887c7c7d25cfabe8064df5))
 
@@ -290,6 +310,14 @@ Closes #157 ([`e47a361`](https://github.com/benkozi/CATChem/commit/e47a361559293
 - Improve code maintainability by eliminating dead code and reducing compilation warnings ([`8ccd052`](https://github.com/benkozi/CATChem/commit/8ccd0527d56d6171f3d6551e7415c1ddf343ea12))
 
 ### Unknown
+
+* Merge branch 'feature/container-build-dev' into feature/container-build [ci skip] ([`bbfb2d6`](https://github.com/benkozi/CATChem/commit/bbfb2d65d443cce2be243259f9e527948f2dd35a))
+
+* Feature/container build dev feat (#1)
+
+* some work [ci skip]
+
+* fix: branch targets ([`081df42`](https://github.com/benkozi/CATChem/commit/081df4268471444bd43814b117f10c652ebd1dcf))
 
 * simplify ci ([`81864e3`](https://github.com/benkozi/CATChem/commit/81864e375c85766681de3bd1e0fecfad67fc3089))
 

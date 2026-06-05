@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "catchem-docs"
-version = "0.0.1"
+version = "0.0.2-rc.1"
 description = "CATChem (Configurable Atmospheric Chemistry) Documentation"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -41,6 +41,7 @@ dev = [
 
 
 
+
 [tool.setuptools]
 packages = []
 
@@ -56,9 +57,9 @@ upload_to_pypi = false
 build_command = ""
 
 [tool.semantic_release.branches.main]
-match = "(feature/container-build|main)"
-prerelease = true
+match = "(^feature/container-build$|^main$)"
+prerelease = false
 
 [tool.semantic_release.branches.develop]
-match = "(feature/container-build-dev|develop)"
+match = "(^feature/dev-container-build$|^develop$)"
 prerelease = true
