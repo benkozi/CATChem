@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.0.3 (2026-06-05)
+
+### Unknown
+
+* Merge pull request #8 from benkozi/feature/dev-container-build
+
+chore: merge develop to main ([`41224fb`](https://github.com/benkozi/CATChem/commit/41224fba7193e9c3820f9b23c3389c443e112fd4))
+
+
 ## v0.0.3-rc.1 (2026-06-05)
 
 ### Fixes
