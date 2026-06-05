@@ -52,7 +52,7 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.short_sha }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.release_version }}
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:latest
