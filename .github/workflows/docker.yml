@@ -49,14 +49,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#      - name: Check for changes in Spack Base Dockerfile
-#        uses: dorny/paths-filter@v3
-#        id: filter
-#        with:
-#          filters: |
-#            base:
-#              - 'docker/Dockerfile-Spack-Base'
-
       # 5. Build and push Spack Base image
       - name: Spack Base image
         uses: docker/build-push-action@v7
