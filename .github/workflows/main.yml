@@ -64,7 +64,7 @@ jobs:
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
+      #short_sha: ${{ needs.docker-setup.outputs.short_sha }}
       base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
       project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
     secrets: inherit
