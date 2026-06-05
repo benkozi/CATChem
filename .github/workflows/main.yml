@@ -3,7 +3,7 @@ name: Main CI/CD
 on:
   push:
 #    branches: [main, develop]
-    branches: [feature/container-build, feature/container-build-dev]
+    branches: [feature/container-build, feature/dev-container-build]
   pull_request:
   workflow_dispatch:
 
