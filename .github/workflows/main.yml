@@ -74,9 +74,10 @@ jobs:
     uses: ./.github/workflows/docs.yml
 
   docker-cleanup:
-    needs: [docker-setup, docker-develop, docker-release]
+    needs: [docker-setup, docker-develop, docker-release, docs]
     if: always() && needs.docker-develop.result == 'success'
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Delete temporary Docker Hub tags
         run: |
@@ -98,7 +99,7 @@ jobs:
 
           for REPO in "${REPOS[@]}"; do
             echo "Deleting tag $SHORT_SHA from $REPO"
-            curl -s -X DELETE \
+            curl -s --fail -X DELETE \
               -H "Authorization: JWT ${TOKEN}" \
               "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${REPO}/tags/dev-${SHORT_SHA}/"
           done
