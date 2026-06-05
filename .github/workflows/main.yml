@@ -100,5 +100,5 @@ jobs:
             echo "Deleting tag $SHORT_SHA from $REPO"
             curl -s -X DELETE \
               -H "Authorization: JWT ${TOKEN}" \
-              "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${REPO}/tags/${SHORT_SHA}/"
+              "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${REPO}/tags/dev-${SHORT_SHA}/"
           done
