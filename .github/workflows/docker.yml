@@ -68,8 +68,10 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base:latest
+            type=gha,scope=spack-base
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-dev:latest
           cache-to: |
+            type=gha,scope=spack-base,mode=max
             type=inline
 
       # 6. Build and push CATChem image
@@ -84,6 +86,8 @@ jobs:
             BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.tag }}
           cache-from: |
+            type=gha,scope=catchem
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
           cache-to: |
+            type=gha,scope=catchem,mode=max
             type=inline
