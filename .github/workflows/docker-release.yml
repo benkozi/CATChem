@@ -12,9 +12,9 @@ on:
       project_name:
         required: true
         type: string
-#      short_sha:
-#        required: true
-#        type: string
+      short_sha:
+        required: true
+        type: string
 
 jobs:
   retag-and-push:
@@ -52,7 +52,7 @@ jobs:
           push: true
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ inputs.base_project_name }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.short_sha }}
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.release_version }}
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:latest
