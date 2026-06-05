@@ -6,21 +6,15 @@ on:
       release_version:
         required: true
         type: string
-      short_sha:
-        required: true
-        type: string
       base_project_name:
         required: true
         type: string
       project_name:
         required: true
         type: string
-      base_dev_project_name:
-        required: true
-        type: string
-      dev_project_name:
-        required: true
-        type: string
+#      short_sha:
+#        required: true
+#        type: string
 
 jobs:
   retag-and-push:
@@ -35,20 +29,34 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Retag and push Spack Base image
-        run: |
-          DEV_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_dev_project_name }}:${{ inputs.short_sha }}"
-          REL_IMAGE_VER="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}"
-          REL_IMAGE_LATEST="${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:latest"
+      - name: Push Spack Base image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./docker/Dockerfile-Spack-Base
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:latest
+          cache-from: |
+            type=gha,scope=spack-base
+          cache-to: |
+            type=inline
 
-          echo "Retagging $DEV_IMAGE as $REL_IMAGE_VER and $REL_IMAGE_LATEST"
-          docker buildx imagetools create -t "$REL_IMAGE_VER" -t "$REL_IMAGE_LATEST" "$DEV_IMAGE"
-
-      - name: Retag and push Production image
-        run: |
-          DEV_IMAGE="${{ secrets.DOCKER_USERNAME }}/${{ inputs.dev_project_name }}:${{ inputs.short_sha }}"
-          REL_IMAGE_VER="${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.release_version }}"
-          REL_IMAGE_LATEST="${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:latest"
-
-          echo "Retagging $DEV_IMAGE as $REL_IMAGE_VER and $REL_IMAGE_LATEST"
-          docker buildx imagetools create -t "$REL_IMAGE_VER" -t "$REL_IMAGE_LATEST" "$DEV_IMAGE"
+      - name: Push CATChem image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          platforms: linux/amd64
+          build-args: |
+            BASE_IMAGE=${{ inputs.base_project_name }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.release_version }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:latest
+          cache-from: |
+            type=gha,scope=catchem
+          cache-to: |
+            type=inline
