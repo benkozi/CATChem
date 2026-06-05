@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v0.0.3-rc.1 (2026-06-05)
+
+### Fixes
+
+* fix: re-enable caching (#7)
+
+* ci: re-enable caching; switch to dev
+
+* fix: try new caching
+
+* ci: trigger ([`2cc10b3`](https://github.com/benkozi/CATChem/commit/2cc10b35216063beb4f2ee1d13caad8ee0709515))
+
+### Unknown
+
+* Merge branch 'feature/container-build' into feature/dev-container-build [ci skip] ([`4a82bb2`](https://github.com/benkozi/CATChem/commit/4a82bb2d50b3666e9f84afc7cbf8179f03df3c65))
+
+* Merge remote-tracking branch 'origin/feature/container-build' into feature/container-build [ci skip] ([`f721722`](https://github.com/benkozi/CATChem/commit/f7217228b797f01897e0021e7b93d010324804c8))
+
+
 ## v0.0.2 (2026-06-05)
 
 ### Chores
@@ -12,6 +31,10 @@
 * ci: trigger ([`267f5e9`](https://github.com/benkozi/CATChem/commit/267f5e9e00e36bfe89fcbbc0da9b66f6d6adcd88))
 
 ### Unknown
+
+* Merge branch 'feature/dev-container-build' into feature/container-build ([`90925ba`](https://github.com/benkozi/CATChem/commit/90925ba978994520127b20618911ec97b2860d6f))
+
+* Merge branch 'feature/container-build' into feature/dev-container-build [ci skip] ([`b7ba3e2`](https://github.com/benkozi/CATChem/commit/b7ba3e2f3e81079eb9aab3cc952979d68e6d224a))
 
 * Merge pull request #6 from benkozi/feature/dev-container-build
 
