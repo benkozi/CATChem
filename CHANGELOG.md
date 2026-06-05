@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v0.0.2 (2026-06-05)
+
+### Chores
+
+* chore: change to inline [ci skip] ([`9dd9cce`](https://github.com/benkozi/CATChem/commit/9dd9cce8d4ebda918c7db5d457deca568a510c97))
+
+### Continuous Integration
+
+* ci: trigger ([`267f5e9`](https://github.com/benkozi/CATChem/commit/267f5e9e00e36bfe89fcbbc0da9b66f6d6adcd88))
+
+### Unknown
+
+* Merge pull request #6 from benkozi/feature/dev-container-build
+
+chore: merge develop to main ([`5333b2b`](https://github.com/benkozi/CATChem/commit/5333b2b648ed316f57e45ad710deb31115701538))
+
+
 ## v0.0.2-rc.1 (2026-06-05)
 
 ### Fixes
