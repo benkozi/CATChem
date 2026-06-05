@@ -34,12 +34,10 @@ jobs:
     uses: ./.github/workflows/spack-stack.yml
 
   docker-develop:
-#    needs: [docker-setup]
+    needs: [docker-setup]
     uses: ./.github/workflows/docker.yml
     with:
-#      tag: ${{ needs.docker-setup.outputs.short_sha }}
       short_sha: ${{ needs.docker-setup.outputs.short_sha }}
-#      is_release: false
       base_project_name: catchem-spack-base-dev
       project_name: catchem-dev
     secrets: inherit
@@ -61,7 +59,7 @@ jobs:
 #          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
 
   docker-release:
-    needs: [release, docker-develop]
+    needs: [docker-setup, release, docker-develop]
     if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker-release.yml
     with:
@@ -74,3 +72,33 @@ jobs:
   docs:
     needs: [lint, ci-gnu, ci-spack, release, docker-develop]
     uses: ./.github/workflows/docs.yml
+
+  docker-cleanup:
+    needs: [docker-setup, docker-develop, docker-release]
+    if: always() && needs.docker-develop.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete temporary Docker Hub tags
+        run: |
+          # 1. Get JWT Token
+          TOKEN=$(curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d '{"username": "${{ secrets.DOCKER_USERNAME }}", "password": "${{ secrets.DOCKERHUB_TOKEN }}"}' \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          if [ "$TOKEN" = "null" ]; then
+            echo "Failed to authenticate with Docker Hub"
+            exit 1
+          fi
+
+          SHORT_SHA="${{ needs.docker-setup.outputs.short_sha }}"
+
+          # List of repositories to clean up
+          REPOS=("catchem-spack-base-dev" "catchem-dev")
+
+          for REPO in "${REPOS[@]}"; do
+            echo "Deleting tag $SHORT_SHA from $REPO"
+            curl -s -X DELETE \
+              -H "Authorization: JWT ${TOKEN}" \
+              "https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${REPO}/tags/${SHORT_SHA}/"
+          done
