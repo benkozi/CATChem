@@ -49,14 +49,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-#      - name: Check for changes in Spack Base Dockerfile
-#        uses: dorny/paths-filter@v3
-#        id: filter
-#        with:
-#          filters: |
-#            base:
-#              - 'docker/Dockerfile-Spack-Base'
-
       # 5. Build and push Spack Base image
       - name: Spack Base image
         uses: docker/build-push-action@v7
@@ -68,8 +60,10 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
           cache-from: |
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base:latest
+            type=gha,scope=spack-base
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-dev:latest
           cache-to: |
+            type=gha,scope=spack-base,mode=max
             type=inline
 
       # 6. Build and push CATChem image
@@ -84,6 +78,8 @@ jobs:
             BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.tag }}
           cache-from: |
+            type=gha,scope=catchem
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
           cache-to: |
+            type=gha,scope=catchem,mode=max
             type=inline
