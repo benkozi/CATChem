@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.2 (2026-06-08)
+
+### Fixes
+
+* fix: docker release needs to check out ([`99c3518`](https://github.com/benkozi/CATChem/commit/99c3518f4670d03047c34f4f3dc9fc64cf5c27d4))
+
+
 ## v0.1.0-rc.1 (2026-06-08)
 
 ### Features
