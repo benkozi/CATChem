@@ -37,9 +37,7 @@ jobs:
     needs: [docker-setup]
     uses: ./.github/workflows/docker.yml
     with:
-      tag: ${{ needs.docker-setup.outputs.short_sha }}
-      cache_tag: ${{ needs.docker-setup.outputs.short_sha }}
-      is_release: false
+      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
       base_project_name: catchem-spack-base-dev
       project_name: catchem-dev
     secrets: inherit
@@ -61,18 +59,24 @@ jobs:
 #          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
 
   docker-release:
-    needs: [release, docker-setup]
+    needs: [docker-setup, release, docker-develop]
     if: needs.release.outputs.new_release_published == 'true'
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
+      #short_sha: ${{ needs.docker-setup.outputs.short_sha }}
       base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
       project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
-      base_dev_project_name: catchem-spack-base-dev
-      dev_project_name: catchem-dev
     secrets: inherit
 
   docs:
     needs: [lint, ci-gnu, ci-spack, release, docker-develop]
     uses: ./.github/workflows/docs.yml
+
+  docker-cleanup:
+    needs: [docker-setup, docker-develop, docker-release, docs]
+    if: always() && needs.docker-develop.result == 'success'
+    uses: ./.github/workflows/docker-cleanup.yml
+    with:
+      short_sha: ${{ needs.docker-setup.outputs.short_sha }}
+    secrets: inherit

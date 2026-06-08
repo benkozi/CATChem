@@ -3,25 +3,29 @@ name: Build, Test and Push Docker Image
 on:
   workflow_call:
     inputs:
-      tag:
-        description: 'The tag to use for the Docker image'
-        required: true
-        type: string
-      cache_tag:
-        description: 'The tag to use for cache-from'
-        required: true
-        type: string
-      is_release:
-        description: 'Whether this is a release build'
-        required: false
-        type: boolean
-        default: false
+#      tag:
+#        description: 'The tag to use for the Docker image'
+#        required: true
+#        type: string
+#      cache_tag:
+#        description: 'The tag to use for cache-from'
+#        required: true
+#        type: string
+#      is_release:
+#        description: 'Whether this is a release build'
+#        required: false
+#        type: boolean
+#        default: false
       base_project_name:
         description: 'The base project name'
         required: true
         type: string
       project_name:
         description: 'The project name'
+        required: true
+        type: string
+      short_sha:
+        description: 'The short SHA of the commit'
         required: true
         type: string
 
@@ -49,7 +53,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 5. Build and push Spack Base image
+      # 5. Build Spack Base image
       - name: Spack Base image
         uses: docker/build-push-action@v7
         with:
@@ -58,7 +62,7 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev-${{ inputs.short_sha }}
           cache-from: |
             type=gha,scope=spack-base
             type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-dev:latest
@@ -66,20 +70,19 @@ jobs:
             type=gha,scope=spack-base,mode=max
             type=inline
 
-      # 6. Build and push CATChem image
+      # 6. Build CATChem image
       - name: CATChem image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./docker/Dockerfile
-          push: true
+          push: false
           platforms: linux/amd64
           build-args: |
-            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.tag }}
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.tag }}
+            BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev-${{ inputs.short_sha }}
+          tags: ${{ inputs.project_name }}
           cache-from: |
             type=gha,scope=catchem
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ inputs.project_name }}:${{ inputs.cache_tag }}
           cache-to: |
             type=gha,scope=catchem,mode=max
             type=inline
