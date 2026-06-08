@@ -1,6 +1,41 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.1 (2026-06-08)
+
+### Features
+
+* feat: only push on release (#9)
+
+* feat: only push on release
+
+* feat: only push on release
+
+* feat: only push on release
+
+* feat: only push on release
+
+* feat: only push on release
+
+* feat: try cleanup
+
+* feat: try cleanup
+
+* feat: try cleanup
+
+* feat: try cleanup
+
+* ci: trigger
+
+* ci: print delete tag response
+
+* ci: move docker-cleanup to its own thing and print responses ([`b063ab3`](https://github.com/benkozi/CATChem/commit/b063ab3d240d24e2ccbd6039e37e83b6aa67b9b8))
+
+### Unknown
+
+* Merge branch 'feature/container-build' into feature/dev-container-build [ci skip] ([`c07caaa`](https://github.com/benkozi/CATChem/commit/c07caaa7ab07f0900fad19e373de25359eacd134))
+
+
 ## v0.0.3 (2026-06-05)
 
 ### Unknown
