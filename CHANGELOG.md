@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v2.0.0-rc.2 (2026-06-09)
+
+### Fixes
+
+* fix: centralize vars ([`d79c5bf`](https://github.com/benkozi/CATChem/commit/d79c5bf492070f12853dce58c2c5e0017525a1f7))
+
+* fix: variables used once ([`28a4dd1`](https://github.com/benkozi/CATChem/commit/28a4dd1626880829926b1fa3ab268656a3cdc1ff))
+
+* fix: remove string duplication ([`a3ca27a`](https://github.com/benkozi/CATChem/commit/a3ca27ad0b85c3ec0529708d318863737662708d))
+
+
+## v2.0.0-rc.1 (2026-06-09)
+
+### Chores
+
+* chore: for tagging ([`db6eebe`](https://github.com/benkozi/CATChem/commit/db6eebeb8107faf5b114bdbdac89a965ec1cec44))
+
+
 ## v0.1.0-rc.4 (2026-06-09)
 
 ### Fixes
