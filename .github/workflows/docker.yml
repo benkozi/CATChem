@@ -3,19 +3,6 @@ name: Build, Test and Push Docker Image
 on:
   workflow_call:
     inputs:
-#      tag:
-#        description: 'The tag to use for the Docker image'
-#        required: true
-#        type: string
-#      cache_tag:
-#        description: 'The tag to use for cache-from'
-#        required: true
-#        type: string
-#      is_release:
-#        description: 'Whether this is a release build'
-#        required: false
-#        type: boolean
-#        default: false
       base_project_name:
         description: 'The base project name'
         required: true
