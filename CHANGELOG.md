@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.3 (2026-06-09)
+
+### Continuous Integration
+
+* ci: change repository names ([`e51e8b1`](https://github.com/benkozi/CATChem/commit/e51e8b135245bf1caedaddbc2f1189707563412e))
+
+### Fixes
+
+* fix: proper ci repo ([`6065451`](https://github.com/benkozi/CATChem/commit/60654512a2d82fc0daf3dafeace4f112736c172a))
+
+
 ## v0.1.0-rc.2 (2026-06-08)
 
 ### Fixes
