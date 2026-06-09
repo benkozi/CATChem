@@ -38,7 +38,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     with:
       short_sha: ${{ needs.docker-setup.outputs.short_sha }}
-      base_project_name: catchem-spack-base-dev
+      base_project_name: catchem-spack-base-ubuntu-gcc-13-dev
       project_name: catchem-dev
     secrets: inherit
 
@@ -48,16 +48,6 @@ jobs:
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
 
-#  debug-release-outputs:
-#    needs: [release]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Echo Release Outputs
-#        run: |
-#          echo "New release published: ${{ needs.release.outputs.new_release_published }}"
-#          echo "New release version: ${{ needs.release.outputs.new_release_version }}"
-#          echo "Is prerelease: ${{ needs.release.outputs.is_prerelease}}"
-
   docker-release:
     needs: [docker-setup, release, docker-develop]
     if: needs.release.outputs.new_release_published == 'true'
@@ -65,8 +55,8 @@ jobs:
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
       #short_sha: ${{ needs.docker-setup.outputs.short_sha }}
-      base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-dev' || 'catchem-spack-base' }}
-      project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-dev' || 'catchem' }}
+      base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-spack-base-ubuntu-gcc-13-dev' || 'catchem-spack-base-ubuntu-gcc-13' }}
+      project_name: ${{ needs.release.outputs.is_prerelease == 'true' && 'catchem-ubuntu-gcc-13-dev' || 'catchem-ubuntu-gcc-13' }}
     secrets: inherit
 
   docs:

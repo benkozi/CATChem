@@ -1,6 +1,8 @@
 FROM ubuntu:24.04
 
-RUN apt-get update --yes && apt-get install --yes tmux \
+# Install system packages for spack reuse
+RUN apt-get update --yes && apt-get install --yes \
+  tmux \
   vim \
   less \
   git \
@@ -13,20 +15,10 @@ RUN apt-get update --yes && apt-get install --yes tmux \
   ca-certificates \
   libopenmpi-dev \
   libcurl4-openssl-dev \
-#  libopenblas-dev \
-#  liblapack-dev \
-#  libpcre2-dev \
-#  libpcre2-16-0 \
-#  libpcre2-32-0 \
-#  libgsl-dev \
-#  m4 \
   tar \
   gettext \
   libgettextpo-dev \
-#  ninja-build \
   nco \
-#  libaec-dev \
-#  libsz2 \
   libxml2 \
   libxml2-dev \
   libxml2-utils \
@@ -38,21 +30,21 @@ RUN apt-get update --yes && apt-get install --yes tmux \
   && apt-get purge -y --auto-remove \
   && rm -rf /var/lib/apt/lists/*
 
+# Install a more recent version of rust
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
 
+# Clone spack-stack
 WORKDIR /opt/catchem
-RUN git clone --depth=1 --recurse-submodules https://github.com/JCSDA/spack-stack
-WORKDIR /opt/catchem/spack-stack/repos/builtin
-#ARG CACHE_BUST=3
-#RUN git remote add benkozi https://github.com/benkozi/spack-packages.git && git fetch benkozi && git checkout benkozi/cece-cice-test-benkozi
+RUN git clone https://github.com/JCSDA/spack-stack && \
+    cd spack-stack && \
+    git checkout 722284c && \
+    git submodule update --init --recursive
 
 WORKDIR /opt/catchem/spack-stack
 ENV SPACK_ROOT=/opt/catchem/spack-stack/spack
-
-#COPY spack.yaml /opt/regrid-wrapper/spack-stack/spack.yaml
 
 SHELL ["/bin/bash", "-c"]
 
@@ -84,19 +76,8 @@ RUN <<INSTALL_ALL
   spack add esmf yaml-cpp
   spack concretize
   spack install --fail-fast
-#  spack gc -y
-#  spack clean --all
+  spack gc -y
+  spack clean --all
 INSTALL_ALL
 
-# 1. Create a system user (-r) with no password
-# We also create a home directory (-m)
-#RUN useradd -r -m rw
-
-# 2. (Optional) Set up your app directory and give the user ownership
-#WORKDIR /opt/regrid-wrapper
-#RUN chown -R rw:rw /opt/regrid-wrapper
-
-# 3. Switch to the non-root user
-#USER rw
-
-#WORKDIR /opt/regrid-wrapper/spack-stack
+WORKDIR /opt

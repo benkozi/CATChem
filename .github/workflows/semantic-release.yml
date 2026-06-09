@@ -15,7 +15,6 @@ on:
 
 jobs:
   release:
-#    name: Semantic Release
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -36,5 +35,3 @@ jobs:
         id: release
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          #vcs_release: ${{ github.ref_name == 'feature/container-build' }}
-          #changelog: ${{ github.ref_name == 'feature/container-build' }}

@@ -65,7 +65,7 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:dev-${{ inputs.short_sha }}
           cache-from: |
             type=gha,scope=spack-base
-            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-dev:latest
+            type=registry,ref=${{ secrets.DOCKER_USERNAME }}/catchem-spack-base-ubuntu-gcc-13-dev:latest
           cache-to: |
             type=gha,scope=spack-base,mode=max
             type=inline
