@@ -15,20 +15,23 @@ permissions:
   contents: write
   id-token: write
 
-env:
-  BASE_PROJECT_NAME_DEV: catchem-spack-base-ubuntu-gcc-13-dev
-  PROJECT_NAME_DEV: catchem-ubuntu-gcc-13-dev
-  BASE_PROJECT_NAME: catchem-spack-base-ubuntu-gcc-13
-  PROJECT_NAME: catchem-ubuntu-gcc-13
-
 jobs:
   docker-setup:
     runs-on: ubuntu-latest
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
+      base_project_name_dev: ${{ steps.vars.outputs.base_project_name_dev }}
+      project_name_dev: ${{ steps.vars.outputs.project_name_dev }}
+      base_project_name: ${{ steps.vars.outputs.base_project_name }}
+      project_name: ${{ steps.vars.outputs.project_name }}
     steps:
       - id: vars
-        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "base_project_name_dev=catchem-spack-base-ubuntu-gcc-13-dev" >> "$GITHUB_OUTPUT"
+          echo "project_name_dev=catchem-ubuntu-gcc-13-dev" >> "$GITHUB_OUTPUT"
+          echo "base_project_name=catchem-spack-base-ubuntu-gcc-13" >> "$GITHUB_OUTPUT"
+          echo "project_name=catchem-ubuntu-gcc-13" >> "$GITHUB_OUTPUT"
 
   lint:
     uses: ./.github/workflows/lint.yml
@@ -44,7 +47,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     with:
       short_sha: ${{ needs.docker-setup.outputs.short_sha }}
-      base_project_name: ${{ env.BASE_PROJECT_NAME_DEV }}
+      base_project_name: ${{ needs.docker-setup.outputs.base_project_name_dev }}
       project_name: catchem-dev
     secrets: inherit
 
@@ -60,8 +63,8 @@ jobs:
     uses: ./.github/workflows/docker-release.yml
     with:
       release_version: ${{ needs.release.outputs.new_release_version }}
-      base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && env.BASE_PROJECT_NAME_DEV || env.BASE_PROJECT_NAME }}
-      project_name: ${{ needs.release.outputs.is_prerelease == 'true' && env.PROJECT_NAME_DEV || env.PROJECT_NAME }}
+      base_project_name: ${{ needs.release.outputs.is_prerelease == 'true' && needs.docker-setup.outputs.base_project_name_dev || needs.docker-setup.outputs.base_project_name }}
+      project_name: ${{ needs.release.outputs.is_prerelease == 'true' && needs.docker-setup.outputs.project_name_dev || needs.docker-setup.outputs.project_name }}
     secrets: inherit
 
   docs:
@@ -74,5 +77,5 @@ jobs:
     uses: ./.github/workflows/docker-cleanup.yml
     with:
       short_sha: ${{ needs.docker-setup.outputs.short_sha }}
-      base_project_name: ${{ env.BASE_PROJECT_NAME_DEV }}
+      base_project_name: ${{ needs.docker-setup.outputs.base_project_name_dev }}
     secrets: inherit
