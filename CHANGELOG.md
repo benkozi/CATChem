@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.4 (2026-06-09)
+
+### Fixes
+
+* fix: update version ([`2813a49`](https://github.com/benkozi/CATChem/commit/2813a49afe23a6b402ae681ac1019fbb88a4edf1))
+
+
 ## v0.1.0-rc.3 (2026-06-09)
 
 ### Continuous Integration
