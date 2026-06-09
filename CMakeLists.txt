@@ -149,6 +149,11 @@ if(BUILD_NUOPC)
   endif()
 endif()
 
+# Find yaml-cpp for configuration parsing
+if(NOT TARGET yaml-cpp::yaml-cpp AND NOT TARGET yaml-cpp)
+  find_package(yaml-cpp QUIET)
+endif()
+
 add_subdirectory(src)
 
 # Enable testing for standalone builds
