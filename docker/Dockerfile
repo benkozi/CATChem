@@ -12,6 +12,8 @@ RUN source /opt/catchem/spack-stack/setup.sh && \
     cd build && \
     cmake .. \
       -DCATCHEM_BUILD_TESTING=ON \
+      -DCATCHEM_BUILD_NUOPC=ON \
+      -DBUILD_MUSICA=ON \
       -DCMAKE_INSTALL_PREFIX=/opt/catchem/install \
       -DCMAKE_BUILD_TYPE=Debug && \
     make -j$(nproc) && \
