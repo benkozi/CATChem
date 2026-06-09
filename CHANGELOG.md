@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v2.0.0-rc.3 (2026-06-09)
+
+### Features
+
+* feat: find yaml-cpp (error message) ([`857746e`](https://github.com/benkozi/CATChem/commit/857746e01a058717895370d9210323bd3a48abd6))
+
+* feat: find yaml-cpp ([`7ccbe82`](https://github.com/benkozi/CATChem/commit/7ccbe825d88459a26c33374329d07ff27531bcff))
+
+
 ## v2.0.0-rc.2 (2026-06-09)
 
 ### Fixes
