@@ -7,6 +7,10 @@ on:
         description: 'The short SHA of the commit'
         required: true
         type: string
+      base_project_name:
+        description: 'The base project name'
+        required: true
+        type: string
 
 jobs:
   delete-tags:
@@ -29,7 +33,7 @@ jobs:
           fi
 
           # List of repositories to clean up
-          REPOS=("catchem-spack-base-ubuntu-gcc-13-dev")
+          REPOS=("${{ inputs.base_project_name }}")
 
           for REPO in "${REPOS[@]}"; do
             echo "Deleting tag ${{ inputs.short_sha }} from $REPO"
