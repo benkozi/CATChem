@@ -1,6 +1,374 @@
 # CHANGELOG
 
 
+## v2.0.0-rc.4 (2026-06-10)
+
+### Chores
+
+* chore: fix use mpi error ([`8189269`](https://github.com/benkozi/CATChem/commit/81892696608f4e04fd501d7b0b09605fbf55b9e1))
+
+### Features
+
+* feat: find yaml-cpp (error message) ([`009157a`](https://github.com/benkozi/CATChem/commit/009157a5b0e25db1e78c7e465c59d8d5ae675152))
+
+* feat: add nuopc and musica builds ([`c991c14`](https://github.com/benkozi/CATChem/commit/c991c14dfa3e86eb986d5b05377fd9ace8d2c113))
+
+### Unknown
+
+* Merge remote-tracking branch 'lwcugb/feature/gcafs' into feature/dev-container-build ([`aaa55db`](https://github.com/benkozi/CATChem/commit/aaa55db433130dca2e66a76350c7895e2eec27c0))
+
+* remove debug codes in dust ([`9092f05`](https://github.com/benkozi/CATChem/commit/9092f05be015af9d78d14ceb59877e84dac8ef12))
+
+* fix dust test ([`433f957`](https://github.com/benkozi/CATChem/commit/433f9574589beb4a461a883ef7ebc9cc49fd35cf))
+
+* fix dust test ([`d21f0f1`](https://github.com/benkozi/CATChem/commit/d21f0f1964071a24b504ef990d09d55f5f7116af))
+
+* update configure files ([`18230d0`](https://github.com/benkozi/CATChem/commit/18230d09459e7a657b5b66249f218f8ecae37343))
+
+* Merge branch 'ufs_develop' into feature/gcafs ([`afead9a`](https://github.com/benkozi/CATChem/commit/afead9a03c4ddb55f1492b0db636991e071610b3))
+
+* pre-commit check ([`910710d`](https://github.com/benkozi/CATChem/commit/910710d36a69e726f035e54c4f24e4dfe66f69de))
+
+* update configure file ([`86ac701`](https://github.com/benkozi/CATChem/commit/86ac70103321862bca48229fde9b29c67d4fafe4))
+
+* update carbon species settings ([`f2d2e02`](https://github.com/benkozi/CATChem/commit/f2d2e027e775973ca504d0ccc988143ed22bbad2))
+
+* update time interpolation ([`5f4194a`](https://github.com/benkozi/CATChem/commit/5f4194a9ef2abf503ca2215a94bf08fbf48388d2))
+
+* add temporal linear interpolation for dust ([`a9d03dc`](https://github.com/benkozi/CATChem/commit/a9d03dc2bb326199ebb35dc3b331d5c24021e866))
+
+* update fengsha by removing temperature check ([`beffb95`](https://github.com/benkozi/CATChem/commit/beffb958870b06e182e138772e635e6a8375c170))
+
+* update seasalt process ([`21e1075`](https://github.com/benkozi/CATChem/commit/21e107509f3fefd948e761f68fbd1033ae4f1774))
+
+* fix SO4 issue ([`370e98e`](https://github.com/benkozi/CATChem/commit/370e98e57b7329809984658fc8a7bfaf2604d886))
+
+* Merge pull request #6 from benkozi/feature/gcafs-benkozi-2
+
+[feature/gcafs] feat: remove fortran line length restrictions for all GNU build types ([`003f06e`](https://github.com/benkozi/CATChem/commit/003f06ed4ce8b0e5c7ecdde53449e89a0079c405))
+
+* pre-commit fix ([`ea49b6a`](https://github.com/benkozi/CATChem/commit/ea49b6a22f56b40c719b9f6dc6ec26d3f878cc04))
+
+* remove fortran line length restrictions for all GNU build types ([`58b1a64`](https://github.com/benkozi/CATChem/commit/58b1a6471e795d140d121f7a9dff8e065c55c786))
+
+* Merge pull request #5 from benkozi/feature/gcafs-benkozi
+
+[feature/gcafs] feat: add ESMF tracing to NUOPC cap & guaranteed bit-for-bit ([`95eafb1`](https://github.com/benkozi/CATChem/commit/95eafb17fc460c8158442fb69bc45110aac4fc2c))
+
+* Merge remote-tracking branch 'lwcugb/feature/gcafs' into feature/gcafs-benkozi ([`626617d`](https://github.com/benkozi/CATChem/commit/626617d09f7658c83d08a879b3fc9688e56f968b))
+
+* lowercase ESMF target
+
+Co-authored-by: Copilot <copilot@github.com> ([`3edb693`](https://github.com/benkozi/CATChem/commit/3edb693ff8e7cb2c1571ebd95d9b9ce892ba4a2b))
+
+* Merge remote-tracking branch 'lwcugb/feature/gcafs' into feature/gcafs-benkozi ([`304199d`](https://github.com/benkozi/CATChem/commit/304199d898ee03bc8bd3d340eee4ee2249e8a0cd))
+
+* pre-commit check ([`9c0a43e`](https://github.com/benkozi/CATChem/commit/9c0a43ee584bd35ab2c48998d4490f6d91ced055))
+
+* fix floating errors
+
+Co-authored-by: Copilot <copilot@github.com> ([`a81a757`](https://github.com/benkozi/CATChem/commit/a81a757d92631b84b3964251c24bb7d689d0fdc7))
+
+* successful ursa rt run ([`e32b1f0`](https://github.com/benkozi/CATChem/commit/e32b1f0e9f508a0c1e7d9daf7423fb4db9f55c5c))
+
+* add termorderflag to ESMF_FieldRegrid [ci skip] ([`89da224`](https://github.com/benkozi/CATChem/commit/89da224d5a9fbb0799f7822cd3acc2f752b2b426))
+
+* add catchem trace nuopc [ci skip] ([`e833d00`](https://github.com/benkozi/CATChem/commit/e833d0057bc311e865b1e4405f7e1880b3a36c7e))
+
+* add tracing [ci skip} ([`cc9f679`](https://github.com/benkozi/CATChem/commit/cc9f679bc2ba4338e36231e9368e1abf516d2946))
+
+* fix debug build issues
+
+Co-authored-by: Copilot <copilot@github.com> ([`87d8630`](https://github.com/benkozi/CATChem/commit/87d8630c5fb7959f2738f529903e3814f4ef3764))
+
+* pre-commit check ([`ac2d9be`](https://github.com/benkozi/CATChem/commit/ac2d9be019a395e8228892797ccc3c7c9a6eedc6))
+
+* fix ESMF link issue when finalizing the model
+
+Co-authored-by: Copilot <copilot@github.com> ([`dc06221`](https://github.com/benkozi/CATChem/commit/dc06221a1c7ec04ad9e13e74afa3a718fc52a864))
+
+* update name of the yaml files ([`78c2966`](https://github.com/benkozi/CATChem/commit/78c2966fd0014477d140cd001b4451d91f4dd52c))
+
+* pre-commit check ([`fbd7ac5`](https://github.com/benkozi/CATChem/commit/fbd7ac5a2703dc0977dcf1ffe0ab90c3d7a4ef54))
+
+* fix some diagnostic initialization bugs ([`de6d35d`](https://github.com/benkozi/CATChem/commit/de6d35dfd3831fab281be6587d2cc8759fcea6d9))
+
+* Merge pull request #4 from benkozi/feature/catchem-ufs
+
+[feature/gcafs] feat: build updates and minor fixes to compile with WM develop ([`85c2961`](https://github.com/benkozi/CATChem/commit/85c29616b6c547063efc5575448b26764f16727c))
+
+* remove extra import & force 32-bit ([`20ca011`](https://github.com/benkozi/CATChem/commit/20ca0118a0e9ba13f318c8e093f1d3d5187511a2))
+
+* Merge remote-tracking branch 'lwcugb/feature/gcafs' into feature/catchem-ufs [ci skip] ([`599a447`](https://github.com/benkozi/CATChem/commit/599a447e74ddc4a476df41327d17d7097adde93a))
+
+* pre-commit check ([`3d9f6b1`](https://github.com/benkozi/CATChem/commit/3d9f6b142f322a771e2be0994bc5d8438a518734))
+
+* Merge branch 'feature/dust' into feature/gcafs ([`d8c5b97`](https://github.com/benkozi/CATChem/commit/d8c5b978a6f831b04e52fa065c51943dfdf0f829))
+
+* Reset musica submodule to match upstream develop ([`fe3a28e`](https://github.com/benkozi/CATChem/commit/fe3a28e56f36612a12949c9761d2830e393ee933))
+
+* add  mie-based emission factor for OC ([`125e227`](https://github.com/benkozi/CATChem/commit/125e227786bac4bd0cb5d7d6115402f05d6bb4ee))
+
+* update emission read time control ([`e191098`](https://github.com/benkozi/CATChem/commit/e19109865999c6c4187406accc1486fbffe30d74))
+
+* update regrid module ([`a46b198`](https://github.com/benkozi/CATChem/commit/a46b1984a5ee90a753ed4e30c0bdcd952dc2a3aa))
+
+* enable regrid and tile operation ([`60ba903`](https://github.com/benkozi/CATChem/commit/60ba903fdd6b0cc128a51137bfa6c49ac74b0a46))
+
+* Update GOCART cmake file ([`962a025`](https://github.com/benkozi/CATChem/commit/962a025bd318937702437fa28766a06d5960c7bc))
+
+* change data types back ([`c6741a4`](https://github.com/benkozi/CATChem/commit/c6741a41aba9bccaa4bfd4a0e3a33472f6777cd9))
+
+* Update data type in schemes related to GOCART ([`e76ed74`](https://github.com/benkozi/CATChem/commit/e76ed74ecd8d0d887e7512207828eb04a8bd58da))
+
+* Add fp to TimeState_Mod ([`91f0777`](https://github.com/benkozi/CATChem/commit/91f0777bb43a12d3e39e9525ec46691ce52cad50))
+
+* pre-commit check ([`660d7ea`](https://github.com/benkozi/CATChem/commit/660d7ea7aa0cf89516ea56571c691221a7db2b14))
+
+* Merge branch 'feature/ocbc' into feature/dust ([`3cd1f2a`](https://github.com/benkozi/CATChem/commit/3cd1f2a61ca45f4ec5bea34ca97104fd3a1952d9))
+
+* Merge branch 'ufs_develop' into feature/ocbc ([`08c4a02`](https://github.com/benkozi/CATChem/commit/08c4a02cc0045b28324d13e3e444852db95cb83d))
+
+* Merge branch 'develop' into feature/ocbc ([`3a7d041`](https://github.com/benkozi/CATChem/commit/3a7d0415c7db5b030ff959e8af611a6f3029a961))
+
+* Merge branch 'develop' into feature/ocbc ([`13ab178`](https://github.com/benkozi/CATChem/commit/13ab17835515bb9b7435fbfdc1684b03204c735f))
+
+* update dust schemes ([`1b09d35`](https://github.com/benkozi/CATChem/commit/1b09d3514e1c6fb4f899e1b7bfe2ed93acb3be7b))
+
+* update dust process and cmake file to turn off test build as a submodule with UFS ([`79d8863`](https://github.com/benkozi/CATChem/commit/79d886390e3d820f58af5611389ce1b94a3aeeb0))
+
+* update dust process ([`02b01a4`](https://github.com/benkozi/CATChem/commit/02b01a41a40dbb83348de234de65cc9305ae66ff))
+
+* debug dust ([`e50a697`](https://github.com/benkozi/CATChem/commit/e50a6970dbd52c54a7d7d1901ad3452439c24b8e))
+
+* pre-commit check ([`df0ee08`](https://github.com/benkozi/CATChem/commit/df0ee080c0cf7dae669ba1dc8b46eae1a09fc2db))
+
+* add dust emission process ([`5dec1a0`](https://github.com/benkozi/CATChem/commit/5dec1a03d066e53efee7276c61adedf441e0169c))
+
+* update yaml file ([`fc27cd8`](https://github.com/benkozi/CATChem/commit/fc27cd8c556e3cf37c4cf5f698e3b2ead3aa213b))
+
+* update unit conversion annotation ([`7b8fed7`](https://github.com/benkozi/CATChem/commit/7b8fed7ad0cdd987fb52c83c88c14b621c6b6236))
+
+* use new test organization ([`60b382c`](https://github.com/benkozi/CATChem/commit/60b382c47f15194289fda8d91d767e5c3be9c8e5))
+
+* Merge branch 'feature/ocbc' of https://github.com/lwcugb/CATChem into feature/ocbc ([`4fac8e2`](https://github.com/benkozi/CATChem/commit/4fac8e2009833bedb011330d1751e50fbdb41cb9))
+
+* Merge branch 'develop' into feature/ocbc ([`3592577`](https://github.com/benkozi/CATChem/commit/3592577414e36961f396db667279e3ab91a85d38))
+
+* Merge branch 'feature/cc_restructure' into feature/ocbc ([`8f12257`](https://github.com/benkozi/CATChem/commit/8f12257ba346cbbcb210bc54a42794321727f967))
+
+* set negative values for carbon loss rates ([`b2d4d95`](https://github.com/benkozi/CATChem/commit/b2d4d952af1af1a1fea9eee10ef6fefaeb218e75))
+
+* pre-commit check ([`9922af0`](https://github.com/benkozi/CATChem/commit/9922af0c4aff7f103a27a138529052498ec09e19))
+
+* update config yaml file ([`d69224a`](https://github.com/benkozi/CATChem/commit/d69224a936553bb1b8f06831c59d0c7253a51f68))
+
+* bug fix for ocbc ([`75fefb4`](https://github.com/benkozi/CATChem/commit/75fefb4ef143ae84605bebc971009e78c775d694))
+
+* pre-commit check ([`f43c20c`](https://github.com/benkozi/CATChem/commit/f43c20cba87f4322e6246993cfe6adb8a6ada0c0))
+
+* Merge branch 'feature/cc_restructure' into feature/ocbc ([`7c05cea`](https://github.com/benkozi/CATChem/commit/7c05cea7e6e5bff6ef1afb5d6a985f8948ff91a1))
+
+* add carbchem process for OCBC ([`84e59c4`](https://github.com/benkozi/CATChem/commit/84e59c45f1b962c956446716ba28790e1fc530da))
+
+* remove minor comment [ci skip] ([`3ac9f35`](https://github.com/benkozi/CATChem/commit/3ac9f3524ec1fbdc4e484e39525d7c4cf4f58c2c))
+
+* add CATCHEM_ prefix to vars used by the WM [ci skip]
+
+- fixed a few warnings/errors from the WM build ([`fb77410`](https://github.com/benkozi/CATChem/commit/fb77410db7c7522d502866d5847ea6fefe26748d))
+
+* compiled WM on Ursa successfully [ci skip] ([`2f5a840`](https://github.com/benkozi/CATChem/commit/2f5a840f9a7cfb674e5235a8b004379c19f60741))
+
+* Merge remote-tracking branch 'lwcugb/feature/cc_restructure' into feature/catchem-ufs ([`7df0496`](https://github.com/benkozi/CATChem/commit/7df0496f4f21a25581f6c2059c0eddc5f52d730f))
+
+* Merge branch 'develop' into feature/cc_restructure ([`6c57c97`](https://github.com/benkozi/CATChem/commit/6c57c97e5ee135449256077bb3ad5e2ded3e602b))
+
+* Merge branch 'develop' into feature/cc_restructure ([`69ee1a2`](https://github.com/benkozi/CATChem/commit/69ee1a2449e77336c428603f95752c27a53adb7f))
+
+* Merge pull request #3 from ufs-community/test-org
+
+Test organization ([`f9a9997`](https://github.com/benkozi/CATChem/commit/f9a99971aa65ffdad0a852ef310747360c71e83f))
+
+* Update the template too ([`5927b2a`](https://github.com/benkozi/CATChem/commit/5927b2a827f51eee02422200f08f17bb62798ac6))
+
+* Add option to disable building the tests ([`6a0fa9c`](https://github.com/benkozi/CATChem/commit/6a0fa9cd4b7e5274347f0cf092f1c9b6dcfa9940))
+
+* Automatically add process tests ([`25a5afc`](https://github.com/benkozi/CATChem/commit/25a5afc0f9c921f796c6530ba602f7830f357c02))
+
+* Same for the other processes ([`18ed706`](https://github.com/benkozi/CATChem/commit/18ed7064fd79bb370c4b39b2a4aa862237bc26fc))
+
+* Get the dry-dep tests in build/tests
+
+so that --test-dir build/tests can be used and discover them
+
+with this change, compare to wet-dep tests' location:
+
+src/process/wetdep/tests/test_wetdep_integration
+src/process/wetdep/tests/test_wetdep_unit
+tests/process/drydep/test_drydep_integration
+tests/process/drydep/test_drydep_unit ([`0b58609`](https://github.com/benkozi/CATChem/commit/0b586097eac72b20d8fc961c431c0a469fc4bbfa))
+
+* Merge branch 'develop' into feature/cc_restructure ([`e0a8a8d`](https://github.com/benkozi/CATChem/commit/e0a8a8d4861dd4d0244b9b3b8679007b57749dbc))
+
+* Fix unit conversion comments in the SO4Chem process ([`8157e81`](https://github.com/benkozi/CATChem/commit/8157e819bf7d8999a7ff1f793cf47ac24a3fa3af))
+
+* nullify some pointers in gocart schemes ([`0693a5e`](https://github.com/benkozi/CATChem/commit/0693a5ee6abd7d03d5f11421976b42117fff510f))
+
+* delete generated examples in the process folder ([`821fe18`](https://github.com/benkozi/CATChem/commit/821fe1827e1169d7d53b44e2d939090337b94337))
+
+* fix CC_Warning and CC_Error ([`fbc05f6`](https://github.com/benkozi/CATChem/commit/fbc05f6bc3ae837422347e35e17a27f4b486cc89))
+
+* Merge branch 'feature/cc_restructure' of https://github.com/lwcugb/CATChem into feature/cc_restructure ([`53dc968`](https://github.com/benkozi/CATChem/commit/53dc968114fb5b93a4760ff843a5a80112ed29cd))
+
+* Merge branch 'develop' into feature/cc_restructure ([`710686b`](https://github.com/benkozi/CATChem/commit/710686bf2461a7ead881a7a63a15b8ad1b6404f9))
+
+* update SO4Chem process ([`0edc99e`](https://github.com/benkozi/CATChem/commit/0edc99eb847940409cd093b728163b5880ba45b2))
+
+* pre-commit check ([`92f2d81`](https://github.com/benkozi/CATChem/commit/92f2d819b43c233472d78ad41814f714b9d64edf))
+
+* Merge branch 'feature/cc_restructure' of https://github.com/lwcugb/CATChem into feature/cc_restructure ([`2fff2b2`](https://github.com/benkozi/CATChem/commit/2fff2b268f787b4d567249a2eeabcb1a40950bfa))
+
+* Merge branch 'develop' into feature/cc_restructure ([`3d197fb`](https://github.com/benkozi/CATChem/commit/3d197fbdef233bf6c6d3db66f205bcdaa5231be4))
+
+* update SO4 chem and wetdep reevaporation ([`4803a8f`](https://github.com/benkozi/CATChem/commit/4803a8f1fff9570ee2e93ee1353b066fdba0abaa))
+
+* small bug fix on the common module ([`5735b10`](https://github.com/benkozi/CATChem/commit/5735b10bbf65463afe66cc34864de2f3e1884a5b))
+
+* pre-commit check ([`1523ae3`](https://github.com/benkozi/CATChem/commit/1523ae311bf6b4ca45a892bf6820034c508d7efa))
+
+* Merge branch 'feature/cc_restructure' of https://github.com/lwcugb/CATChem into feature/cc_restructure ([`7c0b6b7`](https://github.com/benkozi/CATChem/commit/7c0b6b7049a36e5e89d8facd0096629aa735638d))
+
+* pre-commit check ([`b34e518`](https://github.com/benkozi/CATChem/commit/b34e51849e07705e2030d43c0565761413a98bce))
+
+* debug so4chem and update aqmio ([`fbc5c10`](https://github.com/benkozi/CATChem/commit/fbc5c101f692a75522a9e9694792dd05f3e7a7db))
+
+* debug SO4chem process ([`a8ded2f`](https://github.com/benkozi/CATChem/commit/a8ded2fbb12e6facb79dec81037d231ea9aa37f4))
+
+* debug so4chem process ([`1e803ff`](https://github.com/benkozi/CATChem/commit/1e803ff109663af45898b6b1f5e494fdbcb8ecbe))
+
+* update so4chem process ([`d8975e9`](https://github.com/benkozi/CATChem/commit/d8975e99ec791c734bce04da99f4c9a3acf39290))
+
+* update cmake ([`f68f4f0`](https://github.com/benkozi/CATChem/commit/f68f4f0d0618e856827eb0c49bd19f9d9d1c14fc))
+
+* update so4chem process ([`b6f679f`](https://github.com/benkozi/CATChem/commit/b6f679fbcf2be0e1985f66bd012bf5014e2444e2))
+
+* update emission read for oxidants ([`f221ca8`](https://github.com/benkozi/CATChem/commit/f221ca81d6c47f7ffe540fead9c52fda52b13937))
+
+* update emission read module ([`9d74e69`](https://github.com/benkozi/CATChem/commit/9d74e694f75e1b57a21ef3c2fa576c7276e08d67))
+
+* update emission read 3D file ([`fe4454f`](https://github.com/benkozi/CATChem/commit/fe4454f851cb6759db15009d43d289e15ef7bacd))
+
+* pre-commit check ([`ff2fed5`](https://github.com/benkozi/CATChem/commit/ff2fed57f43b7594230b85b52f2a1c32d2822752))
+
+* Merge branch 'develop' of https://github.com/ufs-community/CATChem into feature/cc_restructure ([`642c4ed`](https://github.com/benkozi/CATChem/commit/642c4ed80a42c13d518d07101aea931d7fbca32c))
+
+* add SO4chem process from gocart ([`a05a84c`](https://github.com/benkozi/CATChem/commit/a05a84c654056422018be916db8682e355cae094))
+
+* pre-commit check ([`d7a7de7`](https://github.com/benkozi/CATChem/commit/d7a7de7b968f103313e19351cf3306898276538a))
+
+* debug emission read module ([`e2f7da9`](https://github.com/benkozi/CATChem/commit/e2f7da95717a507b1a42ec4505b460e9f3bede96))
+
+* debug emission read module ([`6722a22`](https://github.com/benkozi/CATChem/commit/6722a223e0c3a279cb295e728432aa447cf978ec))
+
+* pre-commit check ([`435dc7c`](https://github.com/benkozi/CATChem/commit/435dc7cd82e0f1a1e5367f488ebbae33361d4411))
+
+* debug read emission module ([`fc25460`](https://github.com/benkozi/CATChem/commit/fc2546049cae3c548355f304dbe3628d5faed75c))
+
+* update read emission module ([`b4de465`](https://github.com/benkozi/CATChem/commit/b4de46587bd3d47654b72443192f20c99967c009))
+
+* update emission module ([`fa4e5c1`](https://github.com/benkozi/CATChem/commit/fa4e5c11290c5ca4ebdc8e5b1097ecc02384382f))
+
+* update emission read module ([`294070a`](https://github.com/benkozi/CATChem/commit/294070a81a5d4eeea9222da240cba0f58d1e2740))
+
+* update emission read module ([`0e16285`](https://github.com/benkozi/CATChem/commit/0e162853b96994eb5f57d08b17dafd1103b9af91))
+
+* update emission read module with diagnostics ([`cf16386`](https://github.com/benkozi/CATChem/commit/cf163862c74c8f914f88ade44255e5da0aa86842))
+
+* Add an emission reading module under nuopc ([`5233b45`](https://github.com/benkozi/CATChem/commit/5233b45db4d45b541af8d36917f3988ad3e338f8))
+
+* remove scheme copy files ([`ab150c6`](https://github.com/benkozi/CATChem/commit/ab150c6b3c8ba848ca99bf5e86e3b559a96724c8))
+
+* reverse the time stamp changes ([`12df911`](https://github.com/benkozi/CATChem/commit/12df911403d42220211d824821482ef89517f550))
+
+* Merge branch 'develop' into feature/cc_restructure ([`c1f5c29`](https://github.com/benkozi/CATChem/commit/c1f5c293b2bba618fe1d89583085eb1c16935b03))
+
+* update settling process ([`8c8a2b8`](https://github.com/benkozi/CATChem/commit/8c8a2b88420b8db9e630cecbe245e9fc3fc0fb1d))
+
+* update settling process ([`1bbb353`](https://github.com/benkozi/CATChem/commit/1bbb353c7ab9ca540a74c898d71e4ffbc73bd752))
+
+* start adding settling process ([`4a20517`](https://github.com/benkozi/CATChem/commit/4a2051774892f3c4961c9634f59fcafa8cf4721d))
+
+* unit conversion fix ([`c26b2c0`](https://github.com/benkozi/CATChem/commit/c26b2c0623f2e4bc042ee45347bbb29fab3a83d2))
+
+* fix unit conversion ([`244ecaa`](https://github.com/benkozi/CATChem/commit/244ecaa4134a59e13a43572746882e67e26e7468))
+
+* bug fix ([`e5775fa`](https://github.com/benkozi/CATChem/commit/e5775fa528a87e9ed4eadc4c81493630b2d474bc))
+
+* trimming some files ([`0d9fa2e`](https://github.com/benkozi/CATChem/commit/0d9fa2e6ce0f52aa3e37c1a79b609d8a35a55527))
+
+* update generator ([`7460e73`](https://github.com/benkozi/CATChem/commit/7460e7372b3d3ef925d930e295f42a4a55c85a22))
+
+* bug fix for integration test ([`39613f9`](https://github.com/benkozi/CATChem/commit/39613f95e0efc1b8d1167836b5144a4a34e11aee))
+
+* bug fix integration tests ([`a4793c6`](https://github.com/benkozi/CATChem/commit/a4793c665f4dea4f1c3712ee0fe7d406e6f928e6))
+
+* fix some edge conditions for drydep ([`309067d`](https://github.com/benkozi/CATChem/commit/309067d6ad79d0d46c3e358bfdc5dd2996793640))
+
+* clean some files ([`2ed9d75`](https://github.com/benkozi/CATChem/commit/2ed9d752d2e6b087991d06078c9487923485601c))
+
+* Merge branch 'ufs_develop' into feature/cc_restructure ([`94423d0`](https://github.com/benkozi/CATChem/commit/94423d01d9ddb7f4332c620703e132f2af218dbd))
+
+* update wetdep ([`9130454`](https://github.com/benkozi/CATChem/commit/9130454328da34658da9e97418e7e003b076b6b4))
+
+* add wetdep process ([`c5b872d`](https://github.com/benkozi/CATChem/commit/c5b872de85968ad8aa5131f7b5547e4181db5b2f))
+
+* update generator for drydep ([`64e1d9a`](https://github.com/benkozi/CATChem/commit/64e1d9ae9d61e8d6097a7de89ddb907e4ad1c7dc))
+
+* update generator for drydep ([`27a9187`](https://github.com/benkozi/CATChem/commit/27a91875b058440efee5ae0545398695de3d6ea8))
+
+* emission mapping read bug fix ([`f18b126`](https://github.com/benkozi/CATChem/commit/f18b126b76c89d0c5b709846361239d710b7f2b9))
+
+* update nuopc layer ([`d02647f`](https://github.com/benkozi/CATChem/commit/d02647f5d96d9c94b6f1bff6884d70e8b2f7ffde))
+
+* update nuopc layer ([`19fd283`](https://github.com/benkozi/CATChem/commit/19fd283ccdb467153436e43609b1ffe33af4750b))
+
+* Fix  ifort compiling error ([`0dc6f86`](https://github.com/benkozi/CATChem/commit/0dc6f8667bb49c795c2c03a673b4945e7ee6bd7a))
+
+* update NUOPC cap ([`cb56a74`](https://github.com/benkozi/CATChem/commit/cb56a748497795f3725a454eb97d863821aa101e))
+
+* update nuopc cap ([`e3e7258`](https://github.com/benkozi/CATChem/commit/e3e72588216f8193155391c729fcf128d2066c18))
+
+* delete temp files ([`387affe`](https://github.com/benkozi/CATChem/commit/387affec51fadf9e932af31df55fc88f1c5f2785))
+
+* API file update ([`b718cc4`](https://github.com/benkozi/CATChem/commit/b718cc4cd565016b9080231f29e8621b27877c07))
+
+* update API module ([`e8fde6f`](https://github.com/benkozi/CATChem/commit/e8fde6fc22b1e9bdaaa52465508be44f1f8a57b2))
+
+* add emission mapping to ConfigManager ([`7346a23`](https://github.com/benkozi/CATChem/commit/7346a23f1d14c5b38f10f102e1a0dfbee92dcfb2))
+
+* update generator ([`540dd24`](https://github.com/benkozi/CATChem/commit/540dd24a818cf701000641ade65ee7deaba76864))
+
+* update core test files ([`c9e4bc9`](https://github.com/benkozi/CATChem/commit/c9e4bc98521286526c14a04fa0c4aecab2d8d3d4))
+
+* Merge branch 'feature/cc_restructure' of https://github.com/bbakernoaa/CATChem into feature/cc_restructure ([`88995d2`](https://github.com/benkozi/CATChem/commit/88995d21d56a9ade318fedc174b9d49dbbe694c0))
+
+* update generator for integration test ([`706e56d`](https://github.com/benkozi/CATChem/commit/706e56d4e3072e76a7ec6bbbd4bf4ba8c0099145))
+
+* update generation of process integration test ([`36f3012`](https://github.com/benkozi/CATChem/commit/36f30124e2b28a1ecf7d6677b36bba2cb306e224))
+
+* update integration test of the generator. ([`18b3135`](https://github.com/benkozi/CATChem/commit/18b3135e8a115e30c8be981bc46962b8ab4bee8c))
+
+* update generator ([`29f024d`](https://github.com/benkozi/CATChem/commit/29f024d941c3fbe864e99f2ba55d19befad7b217))
+
+* update  generator for test creation ([`6a8e986`](https://github.com/benkozi/CATChem/commit/6a8e98677e41a3fc43c52cba94df2179aabbde15))
+
+* fix core test ([`4f3df14`](https://github.com/benkozi/CATChem/commit/4f3df1471a85ce20964afd059fd4de7e3ca7f112))
+
+* Merge branch 'feature/cc_restructure' of https://github.com/bbakernoaa/CATChem into feature/cc_restructure ([`ea7674c`](https://github.com/benkozi/CATChem/commit/ea7674c6ac2e5a069193be995f1aeec884d8e56d))
+
+* update process generator to compile seasalt process ([`d65465b`](https://github.com/benkozi/CATChem/commit/d65465bb29d8d6ca301506b2ecc264abc1e1a553))
+
+
 ## v2.0.0-rc.3 (2026-06-09)
 
 ### Features
