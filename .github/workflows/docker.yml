@@ -18,7 +18,6 @@ on:
 
 jobs:
   build-test-push:
-#    name: Build, Test and Push Docker Image
     runs-on: ubuntu-latest
 
     steps:
