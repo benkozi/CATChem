@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.2 (2026-06-10)
+
+### Fixes
+
+* fix: trigger ci ([`e3999f5`](https://github.com/benkozi/CATChem/commit/e3999f58ee99fa95fcac775b0c407c1f9039112f))
+
+
 ## v0.1.0-rc.1 (2026-06-10)
 
 ### Build System
