@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.4 (2026-06-12)
+
+### Fixes
+
+* fix: remove valgrind ([`2805763`](https://github.com/benkozi/CATChem/commit/280576353a576d37030b711d4b081bfd215b336c))
+
+### Unknown
+
+* Merge remote-tracking branch 'origin/feature/dev-container-build' into feature/dev-container-build ([`c6e2cdf`](https://github.com/benkozi/CATChem/commit/c6e2cdf28b53579986656403e8f942fe792b8c02))
+
+
 ## v0.1.0-rc.3 (2026-06-12)
 
 ### Features
@@ -8,6 +19,20 @@
 * feat: valgrind testing ([`23382e1`](https://github.com/benkozi/CATChem/commit/23382e10083f5f8e366c45cec65cabeac72a9215))
 
 * feat: valgrind testing ([`a0c3741`](https://github.com/benkozi/CATChem/commit/a0c3741f46fc157d782ccfa0c2d64ecf5910c6d3))
+
+### Fixes
+
+* fix: remove valgrind ([`b4ab30f`](https://github.com/benkozi/CATChem/commit/b4ab30f045e75ebc9c9f19f50487ab38deb73e0d))
+
+### Unknown
+
+* Revert "feat: valgrind testing"
+
+This reverts commit a0c3741f46fc157d782ccfa0c2d64ecf5910c6d3. ([`60668a8`](https://github.com/benkozi/CATChem/commit/60668a861281f472378a2dd3402969b477ce866c))
+
+* Revert "feat: valgrind testing"
+
+This reverts commit 23382e10083f5f8e366c45cec65cabeac72a9215. ([`67e2076`](https://github.com/benkozi/CATChem/commit/67e207659bb5d433fd55c94095da59c4a42b07ae))
 
 
 ## v0.1.0-rc.2 (2026-06-10)
