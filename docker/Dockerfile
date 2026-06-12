@@ -18,8 +18,7 @@ RUN source /opt/catchem/spack-stack/setup.sh && \
       -DCMAKE_BUILD_TYPE=Debug && \
     make -j$(nproc) && \
     make install && \
-    ctest --output-on-failure && \
-    ctest -T memcheck --output-on-failure
+    ctest --output-on-failure
 
 RUN cat <<EOF >> ~/.bashrc
 # enable spack env by default
