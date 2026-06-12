@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.3 (2026-06-12)
+
+### Features
+
+* feat: valgrind testing ([`23382e1`](https://github.com/benkozi/CATChem/commit/23382e10083f5f8e366c45cec65cabeac72a9215))
+
+* feat: valgrind testing ([`a0c3741`](https://github.com/benkozi/CATChem/commit/a0c3741f46fc157d782ccfa0c2d64ecf5910c6d3))
+
+
 ## v0.1.0-rc.2 (2026-06-10)
 
 ### Fixes
