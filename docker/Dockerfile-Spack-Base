@@ -27,6 +27,7 @@ RUN apt-get update --yes && apt-get install --yes \
   liblapack-dev \
   libopenblas-dev \
   cython3 \
+  valgrind \
   && apt-get purge -y --auto-remove \
   && rm -rf /var/lib/apt/lists/*
 
@@ -52,7 +53,7 @@ RUN <<INSTALL_ALL
   set -eu
   . ./setup.sh
   spack compiler find
-  spack external find rust curl perl git python py-cython cmake gettext findutils tar libxml2 openssl openmpi netcdf-c netcdf-fortran
+  spack external find rust curl perl git python py-cython cmake gettext findutils tar libxml2 openssl openmpi netcdf-c netcdf-fortran valgrind
   spack config add "packages:rust:buildable:false"
   spack config add "packages:curl:buildable:false"
   spack config add "packages:perl:buildable:false"
@@ -68,6 +69,7 @@ RUN <<INSTALL_ALL
   spack config add "packages:openmpi:buildable:false"
   spack config add "packages:netcdf-c:buildable:false"
   spack config add "packages:netcdf-fortran:buildable:false"
+  spack config add "packages:valgrind:buildable:false"
 
   spack config add "packages:esmf:require:^openmpi"
 
