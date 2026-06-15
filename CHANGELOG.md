@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.5 (2026-06-15)
+
+### Features
+
+* feat: rename catchem spack base to ufs-chem ([`3fcc6fc`](https://github.com/benkozi/CATChem/commit/3fcc6fc4490c58c1250586c77e79ef17936f8f5a))
+
+
 ## v0.1.0-rc.4 (2026-06-12)
 
 ### Fixes
