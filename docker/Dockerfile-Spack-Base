@@ -37,14 +37,14 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
 
 # Clone spack-stack
-WORKDIR /opt/catchem
+WORKDIR /opt/ufschem
 RUN git clone https://github.com/JCSDA/spack-stack && \
     cd spack-stack && \
     git checkout 722284c && \
     git submodule update --init --recursive
 
-WORKDIR /opt/catchem/spack-stack
-ENV SPACK_ROOT=/opt/catchem/spack-stack/spack
+WORKDIR /opt/ufschem/spack-stack
+ENV SPACK_ROOT=/opt/ufschem/spack-stack/spack
 
 SHELL ["/bin/bash", "-c"]
 
@@ -71,8 +71,8 @@ RUN <<INSTALL_ALL
 
   spack config add "packages:esmf:require:^openmpi"
 
-  spack env create catchem
-  spack env activate catchem
+  spack env create ufschem
+  spack env activate ufschem
   spack add esmf yaml-cpp
   spack concretize
   spack install --fail-fast
@@ -80,4 +80,12 @@ RUN <<INSTALL_ALL
   spack clean --all
 INSTALL_ALL
 
+RUN cat <<EOF >> ~/.bashrc
+# enable spack env by default
+source /opt/ufschem/spack-stack/setup.sh
+spack env activate ufschem
+EOF
+
 WORKDIR /opt
+
+CMD ["/bin/bash"]

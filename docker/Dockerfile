@@ -1,12 +1,12 @@
-ARG BASE_IMAGE=deckyfre/catchem-spack-base:latest
+ARG BASE_IMAGE=noaaepic/ufschem-spack-base:latest
 FROM ${BASE_IMAGE}
 
 SHELL ["/bin/bash", "-c"]
 
 COPY . /opt/catchem/src
 
-RUN source /opt/catchem/spack-stack/setup.sh && \
-    spack env activate catchem && \
+RUN source /opt/ufschem/spack-stack/setup.sh && \
+    spack env activate ufschem && \
     cd /opt/catchem/src && \
     mkdir build && \
     cd build && \
@@ -22,8 +22,8 @@ RUN source /opt/catchem/spack-stack/setup.sh && \
 
 RUN cat <<EOF >> ~/.bashrc
 # enable spack env by default
-source /opt/catchem/spack-stack/setup.sh
-spack env activate catchem
+source /opt/ufschem/spack-stack/setup.sh
+spack env activate ufschem
 EOF
 
 WORKDIR /opt

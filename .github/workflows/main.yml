@@ -28,9 +28,9 @@ jobs:
       - id: vars
         run: |
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "base_project_name_dev=catchem-spack-base-ubuntu-gcc-13-dev" >> "$GITHUB_OUTPUT"
+          echo "base_project_name_dev=ufschem-spack-base-ubuntu-gcc-13-dev" >> "$GITHUB_OUTPUT"
           echo "project_name_dev=catchem-ubuntu-gcc-13-dev" >> "$GITHUB_OUTPUT"
-          echo "base_project_name=catchem-spack-base-ubuntu-gcc-13" >> "$GITHUB_OUTPUT"
+          echo "base_project_name=ufschem-spack-base-ubuntu-gcc-13" >> "$GITHUB_OUTPUT"
           echo "project_name=catchem-ubuntu-gcc-13" >> "$GITHUB_OUTPUT"
 
   lint:
