@@ -1,7 +1,18 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.7 (2026-06-15)
+
+### Unknown
+
+* Merge remote-tracking branch 'origin/feature/dev-container-build' into feature/dev-container-build ([`c2fccd3`](https://github.com/benkozi/CATChem/commit/c2fccd372ca00607e976ad941c8a0533e05d5b0d))
+
+
 ## v0.1.0-rc.6 (2026-06-15)
+
+### Features
+
+* feat: add parallelio to env ([`1ecb7e0`](https://github.com/benkozi/CATChem/commit/1ecb7e090b9eca973e94b2fd9d3f16c9cb0090ed))
 
 ### Unknown
 
