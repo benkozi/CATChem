@@ -52,7 +52,7 @@ RUN <<INSTALL_ALL
   set -eu
   . ./setup.sh
   spack compiler find
-  spack external find rust curl perl git python py-cython cmake gettext findutils tar libxml2 openssl openmpi netcdf-c netcdf-fortran
+  spack external find rust curl perl git python py-cython cmake gettext findutils tar libxml2 openssl openmpi
   spack config add "packages:rust:buildable:false"
   spack config add "packages:curl:buildable:false"
   spack config add "packages:perl:buildable:false"
@@ -66,14 +66,16 @@ RUN <<INSTALL_ALL
   spack config add "packages:libxml2:buildable:false"
   spack config add "packages:openssl:buildable:false"
   spack config add "packages:openmpi:buildable:false"
-  spack config add "packages:netcdf-c:buildable:false"
-  spack config add "packages:netcdf-fortran:buildable:false"
+
+  # Parallelio needs to build these...
+#  spack config add "packages:netcdf-c:buildable:false"
+#  spack config add "packages:netcdf-fortran:buildable:false"
 
   spack config add "packages:esmf:require:^openmpi"
 
   spack env create ufschem
   spack env activate ufschem
-  spack add esmf yaml-cpp
+  spack add esmf yaml-cpp parallelio+pnetcdf
   spack concretize
   spack install --fail-fast
   spack gc -y
