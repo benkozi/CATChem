@@ -22,11 +22,6 @@ jobs:
         with:
           submodules: recursive
 
-#      - name: Install dependencies
-#        run: |
-#          sudo apt-get update
-#          sudo apt-get install -y cmake make wget g++ gfortran libnetcdf-dev libnetcdff-dev liblapack-dev libopenblas-dev
-
       - name: Install Intel compilers & MPI
         uses: NOAA-EMC/ci-install-intel-toolkit@develop
         with:
@@ -34,53 +29,9 @@ jobs:
           mpi-wrapper-setup: oneapi
           env-update: true
 
-#      # Cache spack, compiler and dependencies
-#      - name: cache-env
-#        id: cache-env
-#        uses: actions/cache@v5
-#        with:
-#          path: |
-#            spack-stack
-#            ~/.spack
-#          key: spack-${{ runner.os }}-${{ env.cache_key }}
-#
-#      # Install dependencies using Spack
-#      - name: install-dependencies-with-spack
-#        if: steps.cache-env.outputs.cache-hit != 'true'
-#        run: |
-#          set -e
-#          git clone https://github.com/JCSDA/spack-stack
-#          cd spack-stack
-#          git checkout 2.1.1
-#          git submodule update --init --recursive
-#          . ./setup.sh
-#
-#          spack mirror add emc-common-build-cache oci://ghcr.io/NOAA-EMC/ci-common-build-cache-oneapi
-#          wget https://github.com/NOAA-EMC/ci-common-build-cache/releases/download/may2026-signing-key/spack-signing-public.asc
-#          spack gpg trust spack-signing-public.asc
-#
-#          spack env create catchem-env
-#          spack env activate catchem-env
-#
-#          spack compiler find
-#          spack external find
-#
-#          spack config add "packages:esmf:require:^intel-oneapi-mpi"
-#          spack config add "packages:all:compiler:[oneapi]"
-#          spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c@=4.9.2+blosc~byterange+dap~fsync~hdf4~ipo~jna~logging+mpi~nczarr_zip+optimize~parallel-netcdf+pic+shared~szip+zstd netcdf-fortran@=4.6.1~doc+pic+shared hdf5@=1.14.5~cxx~fortran+hl~ipo~java~map+mpi+shared~subfiling~szip~threadsafe+tools %oneapi
-#
-#          spack concretize
-#          spack install -v --fail-fast --dirty
-#          spack gc -y
-#          spack clean --all
-
       - name: Configure
         run: |
           set -e
-#          ls /opt/project
-#          cd spack-stack
-#          . ./setup.sh
-#          spack env activate catchem-env
           mkdir build && cd build
           cmake .. \
             -DCATCHEM_BUILD_TESTING=ON \
