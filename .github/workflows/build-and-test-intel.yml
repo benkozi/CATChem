@@ -71,7 +71,7 @@ jobs:
 
       - name: Configure
         run: |
-          source spack/share/spack/setup-env.sh
+          . ./setup.sh
           spack env activate catchem-env
           mkdir build && cd build
           cmake .. \
