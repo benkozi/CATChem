@@ -38,11 +38,11 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --default-toolchain stable
 
-# Clone spack-stack
+# Clone spack-stack (version 2.1.1)
 WORKDIR /opt/ufschem
 RUN git clone https://github.com/JCSDA/spack-stack && \
     cd spack-stack && \
-    git checkout 722284c && \
+  git checkout 37c009d && \
     git submodule update --init --recursive
 
 WORKDIR /opt/ufschem/spack-stack
