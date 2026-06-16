@@ -63,7 +63,7 @@ jobs:
 
           spack config add "packages:esmf:require:^intel-oneapi-mpi"
           spack config add "packages:all:compiler:[oneapi]"
-          spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c@4.9.2+dap+mpi~parallel-netcdf~szip netcdf-fortran@4.6.1 hdf5@1.14.5+mpi+threadsafe %oneapi
+          spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c@=4.9.2+blosc~byterange+dap~fsync~hdf4~ipo~jna~logging+mpi~nczarr_zip+optimize~parallel-netcdf+pic+shared~szip+zstd netcdf-fortran@=4.6.1~doc+pic+shared hdf5@=1.14.5~cxx~fortran+hl~ipo~java~map+mpi+shared~subfiling~szip~threadsafe+tools %oneapi
 
           spack concretize
           spack install -v --fail-fast --dirty
