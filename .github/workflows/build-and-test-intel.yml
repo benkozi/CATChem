@@ -7,7 +7,7 @@ jobs:
   build-and-test-intel:
     name: Intel Build and Test
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         shell: bash -l {0}
@@ -59,11 +59,11 @@ jobs:
 
           spack compiler find
           spack external find
-          
+
           spack config add "packages:esmf:require:^openmpi"
           spack config add "packages:all:compiler:[oneapi]"
           spack add esmf yaml-cpp parallelio+pnetcdf py-pip
-          
+
           spack concretize
           spack install -v --fail-fast --dirty
           spack gc -y
