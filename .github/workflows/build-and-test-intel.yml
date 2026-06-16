@@ -44,6 +44,7 @@ jobs:
       - name: install-dependencies-with-spack
         if: steps.cache-env.outputs.cache-hit != 'true'
         run: |
+          set -e
           git clone https://github.com/JCSDA/spack-stack
           cd spack-stack
           git checkout 2.1.1
@@ -62,7 +63,7 @@ jobs:
 
           spack config add "packages:esmf:require:^intel-oneapi-mpi"
           spack config add "packages:all:compiler:[oneapi]"
-          spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c netcdf-fortran %oneapi
+          spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c@4.9.2 netcdf-fortran@4.6.1 hdf5@1.14.5 %oneapi
 
           spack concretize
           spack install -v --fail-fast --dirty
@@ -71,6 +72,8 @@ jobs:
 
       - name: Configure
         run: |
+          set -e
+          cd spack-stack
           . ./setup.sh
           spack env activate catchem-env
           mkdir build && cd build
