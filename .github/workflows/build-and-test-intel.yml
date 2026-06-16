@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            spack
+            spack-stack
             ~/.spack
           key: spack-${{ runner.os }}-${{ env.cache_key }}
 
@@ -44,8 +44,11 @@ jobs:
       - name: install-dependencies-with-spack
         if: steps.cache-env.outputs.cache-hit != 'true'
         run: |
-          git clone -c feature.manyFiles=true https://github.com/JCSDA/spack.git --branch 2.1.1 --depth 1
-          source spack/share/spack/setup-env.sh
+          git clone https://github.com/JCSDA/spack-stack
+          cd spack-stack
+          git checkout 37c009d
+          git submodule update --init --recursive
+          . ./setup.sh
 
           spack mirror add emc-common-build-cache oci://ghcr.io/NOAA-EMC/ci-common-build-cache-{gcc,oneapi}
           wget https://github.com/NOAA-EMC/ci-common-build-cache/releases/download/may2026-spack-key/spack-signing-public.asc # immutable release; see also https://keys.openpgp.org/search?q=alexander.richert%40noaa.gov
