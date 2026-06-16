@@ -1,7 +1,18 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.8 (2026-06-16)
+
+### Unknown
+
+* Merge remote-tracking branch 'origin/feature/dev-container-build' into feature/dev-container-build ([`3919e40`](https://github.com/benkozi/CATChem/commit/3919e4001c56396aa8cb71164be24c6ce3260418))
+
+
 ## v0.1.0-rc.7 (2026-06-15)
+
+### Features
+
+* feat: fix python deps ([`b5730ea`](https://github.com/benkozi/CATChem/commit/b5730ead16d82f238fa446d7d16299095857c055))
 
 ### Unknown
 
