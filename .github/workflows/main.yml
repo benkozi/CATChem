@@ -43,7 +43,7 @@ jobs:
     uses: ./.github/workflows/spack-stack.yml
 
   ci-intel:
-    uses: ./.github/workflows/build-and-test.yml
+    uses: ./.github/workflows/build-and-test-intel.yml
 
   docker-develop:
     needs: [docker-setup]
