@@ -18,10 +18,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake make wget g++ gfortran libnetcdf-dev libnetcdff-dev liblapack-dev libopenblas-dev
+#      - name: Install dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y cmake make wget g++ gfortran libnetcdf-dev libnetcdff-dev liblapack-dev libopenblas-dev
 
       - name: Install Intel compilers & MPI
         uses: NOAA-EMC/ci-install-intel-toolkit@develop
