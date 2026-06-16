@@ -12,9 +12,9 @@ jobs:
 #      volumes:
 #        - .:/opt/project
 
-#    defaults:
-#      run:
-#        shell: bash -l {0}
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - name: Checkout
