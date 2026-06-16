@@ -42,6 +42,9 @@ jobs:
   ci-spack:
     uses: ./.github/workflows/spack-stack.yml
 
+  ci-intel:
+    uses: ./.github/workflows/build-and-test.yml
+
   docker-develop:
     needs: [docker-setup]
     uses: ./.github/workflows/docker.yml
@@ -52,7 +55,7 @@ jobs:
     secrets: inherit
 
   release:
-    needs: [lint, ci-gnu, ci-spack, docker-develop]
+    needs: [lint, ci-gnu, ci-spack, ci-intel, docker-develop]
     if: github.event_name == 'push'
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
@@ -68,7 +71,7 @@ jobs:
     secrets: inherit
 
   docs:
-    needs: [lint, ci-gnu, ci-spack, release, docker-develop]
+    needs: [lint, ci-gnu, ci-spack, ci-intel, release, docker-develop]
     uses: ./.github/workflows/docs.yml
 
   docker-cleanup:

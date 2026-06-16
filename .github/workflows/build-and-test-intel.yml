@@ -1,0 +1,54 @@
+name: CI (Intel)
+
+on:
+  push:
+#    branches: [main, develop] #tdk
+    branches: [feature/dev-container-build]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-and-test-intel:
+    name: Intel Build and Test
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+#      - name: Install dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y cmake make wget g++ gfortran libnetcdf-dev libnetcdff-dev liblapack-dev libopenblas-dev
+
+      - name: Install Intel compilers & MPI
+        uses: NOAA-EMC/ci-install-intel-toolkit@v1
+        with:
+          install-mpi: true
+          mpi-wrapper-setup: oneapi
+          env-update: true
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. \
+            -DCATCHEM_BUILD_TESTING=ON \
+            -DCATCHEM_BUILD_NUOPC=ON \
+            -DBUILD_MUSICA=ON \
+            -DCMAKE_INSTALL_PREFIX=../install \
+            -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          cmake --build build -j2
+
+      - name: Test
+        run: |
+          ctest --test-dir build --output-on-failure
