@@ -54,10 +54,10 @@ set_target_properties(
 find_package(yaml-cpp QUIET)
 
 if(NOT yaml-cpp_FOUND AND NOT TARGET yaml-cpp::yaml-cpp AND NOT TARGET yaml-cpp)
-  message(
-    FATAL_ERROR
-    "yaml-cpp NOT FOUND BY find_package (Temporary error for testing)"
-  )
+#  message(
+#    FATAL_ERROR
+#    "yaml-cpp NOT FOUND BY find_package (Temporary error for testing)"
+#  )
   message(STATUS "yaml-cpp not found on system, using internal version")
 
   include(FetchContent)
