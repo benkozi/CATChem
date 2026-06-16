@@ -60,6 +60,7 @@ jobs:
           spack compiler find
           spack external find
 
+          spack config add "packages:esmf:require:^intel-oneapi-mpi"
           spack config add "packages:all:compiler:[oneapi]"
           spack add esmf@=8.8.0~debug~external-lapack+external-parallelio+mpi+netcdf+openmp~pnetcdf~python+shared~xerces parallelio@=2.6.3+fortran~ipo~logging+mpi~ncint~pnetcdf+shared~timing yaml-cpp py-pip netcdf-c netcdf-fortran %oneapi
 
