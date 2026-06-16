@@ -29,7 +29,7 @@ jobs:
 #          sudo apt-get install -y cmake make wget g++ gfortran libnetcdf-dev libnetcdff-dev liblapack-dev libopenblas-dev
 
       - name: Install Intel compilers & MPI
-        uses: NOAA-EMC/ci-install-intel-toolkit@v1
+        uses: NOAA-EMC/ci-install-intel-toolkit@develop
         with:
           install-mpi: true
           mpi-wrapper-setup: oneapi
