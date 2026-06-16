@@ -46,7 +46,7 @@ jobs:
         run: |
           git clone https://github.com/JCSDA/spack-stack
           cd spack-stack
-          git checkout 37c009d
+          git checkout 1.9.3
           git submodule update --init --recursive
           . ./setup.sh
 
@@ -62,7 +62,7 @@ jobs:
 
           spack config add "packages:esmf:require:^openmpi"
           spack config add "packages:all:compiler:[oneapi]"
-          spack add esmf yaml-cpp parallelio+pnetcdf py-pip
+          spack add esmf yaml-cpp parallelio+pnetcdf py-pip %oneapi
 
           spack concretize
           spack install -v --fail-fast --dirty
