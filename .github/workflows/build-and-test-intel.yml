@@ -30,8 +30,45 @@ jobs:
           mpi-wrapper-setup: oneapi
           env-update: true
 
+      # Cache spack, compiler and dependencies
+      - name: cache-env
+        id: cache-env
+        uses: actions/cache@v5
+        with:
+          path: |
+            spack
+            ~/.spack
+          key: spack-${{ runner.os }}-${{ env.cache_key }}
+
+      # Install dependencies using Spack
+      - name: install-dependencies-with-spack
+        if: steps.cache-env.outputs.cache-hit != 'true'
+        run: |
+          git clone -c feature.manyFiles=true https://github.com/JCSDA/spack.git --branch 2.1.1 --depth 1
+          source spack/share/spack/setup-env.sh
+
+          spack mirror add emc-common-build-cache oci://ghcr.io/NOAA-EMC/ci-common-build-cache-{gcc,oneapi}
+          wget https://github.com/NOAA-EMC/ci-common-build-cache/releases/download/may2026-spack-key/spack-signing-public.asc # immutable release; see also https://keys.openpgp.org/search?q=alexander.richert%40noaa.gov
+          spack gpg trust spack-signing-public.asc
+
+          spack env create catchem-env
+          spack env activate catchem-env
+
+          spack compiler find
+          spack external find
+          
+          spack config add "packages:esmf:require:^openmpi"
+          spack add esmf yaml-cpp parallelio+pnetcdf py-pip
+          
+          spack concretize
+          spack install -v --fail-fast --dirty
+          spack gc -y
+          spack clean --all
+
       - name: Configure
         run: |
+          source spack/share/spack/setup-env.sh
+          spack env activate catchem-env
           mkdir build && cd build
           cmake .. \
             -DCATCHEM_BUILD_TESTING=ON \
