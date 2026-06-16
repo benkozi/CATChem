@@ -1,7 +1,22 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.9 (2026-06-16)
+
+### Features
+
+* feat: use spack-stack version 2.1.1 ([`364ebc3`](https://github.com/benkozi/CATChem/commit/364ebc3c90d61c52ecfc7ae31b0ae89c909f09ef))
+
+### Unknown
+
+* Merge remote-tracking branch 'origin/feature/dev-container-build' into feature/dev-container-build ([`3c842d4`](https://github.com/benkozi/CATChem/commit/3c842d48ce91933dbfa3b747747ce6b1fcf964b5))
+
+
 ## v0.1.0-rc.8 (2026-06-16)
+
+### Features
+
+* feat: use spack-stack version 2.1.1 ([`8bc82f7`](https://github.com/benkozi/CATChem/commit/8bc82f74951b404c740e5479b7cf6bdc63a7e0ad))
 
 ### Unknown
 
