@@ -36,8 +36,8 @@ jobs:
   lint:
     uses: ./.github/workflows/lint.yml
 
-  ci-gnu:
-    uses: ./.github/workflows/build-and-test.yml
+  ci-gnu-gcc14:
+    uses: ./.github/workflows/build-and-test-gcc-14.yml
 
   ci-intel:
     uses: ./.github/workflows/build-and-test-intel.yml
@@ -52,7 +52,7 @@ jobs:
     secrets: inherit
 
   release:
-    needs: [lint, ci-gnu, ci-intel, docker-develop]
+    needs: [lint, ci-gnu-gcc14, ci-intel, docker-develop]
     if: github.event_name == 'push'
     uses: ./.github/workflows/semantic-release.yml
     secrets: inherit
@@ -68,7 +68,7 @@ jobs:
     secrets: inherit
 
   docs:
-    needs: [lint, ci-gnu, ci-intel, release, docker-develop]
+    needs: [lint, ci-gnu-gcc14, ci-intel, release, docker-develop]
     uses: ./.github/workflows/docs.yml
 
   docker-cleanup:
