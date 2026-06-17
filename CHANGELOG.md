@@ -1,7 +1,78 @@
 # CHANGELOG
 
 
+## v0.1.0-rc.10 (2026-06-17)
+
+### Continuous Integration
+
+* ci: intel runs ([`586dbd4`](https://github.com/benkozi/CATChem/commit/586dbd4714907d2656f2d71e03a0e4efff7127c9))
+
+* ci: add apt packages ([`476591f`](https://github.com/benkozi/CATChem/commit/476591f4830318127fbc2593708004805b6ab1b1))
+
+* ci: add apt packages ([`70b0e8e`](https://github.com/benkozi/CATChem/commit/70b0e8e93e9a021d3c4c884ceb10c186641613aa))
+
+* ci: add apt packages ([`c005c1f`](https://github.com/benkozi/CATChem/commit/c005c1f1ff63d8ff26433071d461ab354a24e5d9))
+
+* ci: add apt packages ([`9677a33`](https://github.com/benkozi/CATChem/commit/9677a336c212fde99828c1e4e141c21f0de79abc))
+
+* ci: add apt packages ([`fecffb0`](https://github.com/benkozi/CATChem/commit/fecffb0ecc6c0d2a93136642705019e8c076ff1e))
+
+* ci: add apt packages ([`c957f60`](https://github.com/benkozi/CATChem/commit/c957f60bb6e8a092a7a00cf1357e3269f70b0c7d))
+
+* ci: add apt packages ([`ac32021`](https://github.com/benkozi/CATChem/commit/ac3202146d12c364059832cfaf08b0af8b507986))
+
+* ci: add apt packages ([`bdb7001`](https://github.com/benkozi/CATChem/commit/bdb70017869c6de4e0fca4f44da81312491aba80))
+
+* ci: add apt packages ([`7733099`](https://github.com/benkozi/CATChem/commit/7733099cd0c005a19dc731fa7bc9142fb86f3b43))
+
+* ci: add apt packages ([`5f7d4df`](https://github.com/benkozi/CATChem/commit/5f7d4dfd55ebc78d33c951845f91595027e2f864))
+
+* ci: add apt packages ([`babe8bc`](https://github.com/benkozi/CATChem/commit/babe8bc5fbad8a83f445204ec8baaf76a1fd5e9b))
+
+* ci: add apt packages ([`68e0703`](https://github.com/benkozi/CATChem/commit/68e07033dfc88563e4f82ae6b1626d729582db69))
+
+* ci: add apt packages ([`92388d1`](https://github.com/benkozi/CATChem/commit/92388d119fdb50078bda3a16b1dd498d577891c5))
+
+* ci: add apt packages ([`2f61e15`](https://github.com/benkozi/CATChem/commit/2f61e155737f13f8a06a20b8a50cc01437688208))
+
+* ci: add apt packages ([`7d405f1`](https://github.com/benkozi/CATChem/commit/7d405f1b3f9fe160d29eb53fc6a2c1df108205ed))
+
+* ci: add apt packages ([`89d7c30`](https://github.com/benkozi/CATChem/commit/89d7c30fc22f42d251bb8b7741a0443a1b432f9b))
+
+* ci: add apt packages ([`ff2e9f6`](https://github.com/benkozi/CATChem/commit/ff2e9f6037053f283cbe59debf57b17a3404a6c5))
+
+* ci: add apt packages ([`ac79b8d`](https://github.com/benkozi/CATChem/commit/ac79b8dddd45b32e3abeda8607e942ed5140818a))
+
+* ci: add apt packages ([`8e71c51`](https://github.com/benkozi/CATChem/commit/8e71c516d2c4b5855f0739d74aaed6aa4bf1557a))
+
+* ci: add apt packages ([`02f438b`](https://github.com/benkozi/CATChem/commit/02f438baa023a5c66e278371c9e4c3e8ea9ce333))
+
+* ci: add apt packages ([`6555961`](https://github.com/benkozi/CATChem/commit/655596153013914a46e84e43c895da7df8a070da))
+
+* ci: add apt packages ([`f051dc4`](https://github.com/benkozi/CATChem/commit/f051dc486235999e8048c4f305dc17d3ce67df3f))
+
+* ci: add apt packages ([`d06d80b`](https://github.com/benkozi/CATChem/commit/d06d80bfbe9e105a374339c397708ec891595920))
+
+* ci: add apt packages ([`3d087c8`](https://github.com/benkozi/CATChem/commit/3d087c80263b5ba44d020b14dccae7adf2e0ac9a))
+
+* ci: add apt packages ([`7c98b54`](https://github.com/benkozi/CATChem/commit/7c98b54134b4a3fee2678b47c040d8d96c836349))
+
+* ci: try intel ([`571fc7f`](https://github.com/benkozi/CATChem/commit/571fc7f43f809564c66286f72f86e1f01866a58e))
+
+### Features
+
+* feat: full ci ([`445bbb3`](https://github.com/benkozi/CATChem/commit/445bbb3f2b862ddd96a4974ae416dbbf9ab76029))
+
+### Unknown
+
+* Merge remote-tracking branch 'origin/feature/dev-container-build' into feature/dev-container-build ([`10cd695`](https://github.com/benkozi/CATChem/commit/10cd6954cb3eba944fbe8f782e1c5d2729afee95))
+
+
 ## v0.1.0-rc.9 (2026-06-16)
+
+### Continuous Integration
+
+* ci: try intel ([`c9ee6a3`](https://github.com/benkozi/CATChem/commit/c9ee6a3f123dd31dabec62db4ca8983075c14e3c))
 
 ### Features
 
