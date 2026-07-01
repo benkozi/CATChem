@@ -22,10 +22,6 @@ project(CATChem VERSION ${CATCHEM_VERSION} LANGUAGES Fortran C CXX)
 set(CATCHEM_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CATCHEM_SRC_DIR "${CATCHEM_ROOT_DIR}/src")
 
-# Global variables for path management
-set(CATCHEM_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
-set(CATCHEM_SRC_DIR "${CATCHEM_ROOT_DIR}/src")
-
 # Option to build NUOPC cap (defaults to OFF)
 option(CATCHEM_BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
 option(CATCHEM_BUILD_TESTING "Build CATChem testing framework" ON)
