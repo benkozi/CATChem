@@ -6,10 +6,13 @@ string(REGEX MATCH "version = \"([^\"]+)\"" _ ${PYPROJECT_TOML})
 set(CATCHEM_VERSION_FULL ${CMAKE_MATCH_1})
 
 # CMake project() VERSION requires numeric format: major[.minor[.patch[.tweak]]]
-# We strip any semver suffixes (like -rc.1) for the project command.
 if(CATCHEM_VERSION_FULL MATCHES "^([0-9]+(\\.[0-9]+)*)")
   set(CATCHEM_VERSION "${CMAKE_MATCH_1}")
 else()
+  message(
+    WARNING
+    "${CATCHEM_VERSION_FULL} includes strings or other characters (likely a release candidate), defaulting to 0.0.0"
+  )
   set(CATCHEM_VERSION "0.0.0")
 endif()
 
@@ -68,11 +71,6 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "^Intel")
     CMAKE_Fortran_FLAGS
     "${CMAKE_Fortran_FLAGS} -diag-disable=6379,10448,10440"
   )
-endif()
-
-# No Fortran line length restrictions on all GNU build types
-if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
-  list(APPEND _catchem_compiler_options -ffree-line-length-none)
 endif()
 
 # No Fortran line length restrictions on all GNU build types
@@ -178,7 +176,6 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
       "CATChem: detected real-8 promotion flag, enabling USE_REAL8"
     )
   endif()
-  message(STATUS "CATChem: using ESMF target '${CATCHEM_ESMF_TARGET}'")
 endif()
 
 # Auto-detect if default real is promoted to 8-byte by the parent build
