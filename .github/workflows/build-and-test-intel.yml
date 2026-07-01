@@ -24,8 +24,6 @@ jobs:
 
       - name: Configure
         run: |
-          #set -e
-          cd /foobar/never/what
           . /entrypoint.sh
           mkdir build && cd build
           cmake .. \
@@ -37,12 +35,10 @@ jobs:
 
       - name: Build
         run: |
-          set -e
           . /entrypoint.sh
           cmake --build build -j2
 
       - name: Test
         run: |
-          set -e
           . /entrypoint.sh
           ctest --test-dir build --output-on-failure
