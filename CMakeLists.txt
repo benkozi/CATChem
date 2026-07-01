@@ -178,23 +178,6 @@ elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
   endif()
 endif()
 
-# Auto-detect if default real is promoted to 8-byte by the parent build
-# or by per-target flags, and define USE_REAL8 so precision_mod sets fp=f8.
-if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
-  if(CMAKE_Fortran_FLAGS MATCHES "-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(STATUS "CATChem: detected -fdefault-real-8, enabling USE_REAL8")
-  endif()
-elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
-  if(CMAKE_Fortran_FLAGS MATCHES "-r8|-real-size 64|-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(
-      STATUS
-      "CATChem: detected real-8 promotion flag, enabling USE_REAL8"
-    )
-  endif()
-endif()
-
 # Find yaml-cpp for configuration parsing
 if(NOT TARGET yaml-cpp::yaml-cpp AND NOT TARGET yaml-cpp)
   find_package(yaml-cpp QUIET)
