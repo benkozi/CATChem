@@ -36,7 +36,8 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile-Spack-Base
-          push: true
+          # tdk
+          push: false
           platforms: linux/amd64
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}
@@ -51,7 +52,8 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-          push: true
+          # tdk
+          push: false
           platforms: linux/amd64
           build-args: |
             BASE_IMAGE=${{ secrets.DOCKER_USERNAME }}/${{ inputs.base_project_name }}:${{ inputs.release_version }}
