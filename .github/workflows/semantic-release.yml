@@ -44,11 +44,10 @@ jobs:
         id: release
         with:
           github_token: ${{ steps.app-token.outputs.token }}
-          changelog: true
 
-      - name: Publish - Python Semantic Release
-        uses: python-semantic-release/publish-action@v10
-        if: steps.release.outputs.released == 'true'
-        with:
-          github_token: ${{ steps.app-token.outputs.token }}
-          tag: ${{ steps.release.outputs.tag }}
+#      - name: Publish - Python Semantic Release
+#        uses: python-semantic-release/publish-action@v10
+#        if: steps.release.outputs.released == 'true'
+#        with:
+#          github_token: ${{ steps.app-token.outputs.token }}
+#          tag: ${{ steps.release.outputs.tag }}
