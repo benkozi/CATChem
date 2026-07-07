@@ -3,7 +3,7 @@ name: main
 on:
   push:
 #    branches: [main, develop] #tdk
-    branches: [feat/enable-pushing-protected3]
+    branches: [feat/enable-pushing-protected4]
   pull_request:
   workflow_dispatch:
 
