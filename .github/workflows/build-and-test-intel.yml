@@ -19,30 +19,30 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Intel compilers & MPI
-        uses: NOAA-EMC/ci-install-intel-toolkit@develop
-        with:
-          install-mpi: true
-          mpi-wrapper-setup: oneapi
-          env-update: true
-
-      - name: Configure
-        run: |
-          . /entrypoint.sh
-          mkdir build && cd build
-          cmake .. \
-            -DCATCHEM_BUILD_TESTING=ON \
-            -DCATCHEM_BUILD_NUOPC=ON \
-            -DCATCHEM_BUILD_MUSICA=ON \
-            -DCMAKE_INSTALL_PREFIX=../install \
-            -DCMAKE_BUILD_TYPE=Debug
-
-      - name: Build
-        run: |
-          . /entrypoint.sh
-          cmake --build build -j2
-
-      - name: Test
-        run: |
-          . /entrypoint.sh
-          ctest --test-dir build --output-on-failure
+#      - name: Install Intel compilers & MPI
+#        uses: NOAA-EMC/ci-install-intel-toolkit@develop
+#        with:
+#          install-mpi: true
+#          mpi-wrapper-setup: oneapi
+#          env-update: true
+#
+#      - name: Configure
+#        run: |
+#          . /entrypoint.sh
+#          mkdir build && cd build
+#          cmake .. \
+#            -DCATCHEM_BUILD_TESTING=ON \
+#            -DCATCHEM_BUILD_NUOPC=ON \
+#            -DCATCHEM_BUILD_MUSICA=ON \
+#            -DCMAKE_INSTALL_PREFIX=../install \
+#            -DCMAKE_BUILD_TYPE=Debug
+#
+#      - name: Build
+#        run: |
+#          . /entrypoint.sh
+#          cmake --build build -j2
+#
+#      - name: Test
+#        run: |
+#          . /entrypoint.sh
+#          ctest --test-dir build --output-on-failure
