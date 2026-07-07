@@ -50,6 +50,8 @@ version_toml = [
 version_variables = []
 upload_to_pypi = false
 build_command = ""
+allow_zero_version = true
+changelog = true
 
 [tool.semantic_release.branches.main]
 match = "(^main$)"
