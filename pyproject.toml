@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "catchem-docs"
-version = "1.0.0-rc.1"
+version = "0.1.0-rc.1"
 description = "CATChem (Configurable Atmospheric Chemistry) Documentation"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -57,5 +57,5 @@ prerelease = false
 
 [tool.semantic_release.branches.develop]
 #match = "(^develop$)" tdk
-match = "(^feat/enable-pushing-protected3$)"
+match = "(^feat/enable-pushing-protected4$)"
 prerelease = true
