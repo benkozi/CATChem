@@ -2,6 +2,33 @@
 
 <!-- version list -->
 
+## v0.1.0-rc.1 (2026-07-07)
+
+### Features
+
+- Fix changelog ([#18](https://github.com/benkozi/CATChem/pull/18),
+  [`e2cacbc`](https://github.com/benkozi/CATChem/commit/e2cacbc0bd8ea008f617abfa9a93df3d5dc5ab8f))
+
+- GOCART-2G processes for GCAFS ([#159](https://github.com/benkozi/CATChem/pull/159),
+  [`c1ecaf3`](https://github.com/benkozi/CATChem/commit/c1ecaf3cbdbd0097d5949a491935493f4b061a65))
+
+- Link MUSICA ([#154](https://github.com/benkozi/CATChem/pull/154),
+  [`5b50860`](https://github.com/benkozi/CATChem/commit/5b50860ab50f390ce4bab4fb8f7a24f9537fd5a7))
+
+- No major version ([#17](https://github.com/benkozi/CATChem/pull/17),
+  [`6f9c238`](https://github.com/benkozi/CATChem/commit/6f9c238db53d0ea0060f3a82eeafcd78557e45e7))
+
+- Try again ([#16](https://github.com/benkozi/CATChem/pull/16),
+  [`4ca40a1`](https://github.com/benkozi/CATChem/commit/4ca40a10b2aef3cc22fca8923c9fedc72eaa76bf))
+
+- Try changelog again ([#19](https://github.com/benkozi/CATChem/pull/19),
+  [`249366d`](https://github.com/benkozi/CATChem/commit/249366d43775f53a6c090bfeaaa854e9f41d6552))
+
+- **ci**: Add semantic release, docker build jobs & find yaml-cpp
+  ([#158](https://github.com/benkozi/CATChem/pull/158),
+  [`a8ff444`](https://github.com/benkozi/CATChem/commit/a8ff444744ff94981615785ebf595c53ea220824))
+
+
 ## v0.0.1 (2026-05-21)
 
 ## What's Changed
