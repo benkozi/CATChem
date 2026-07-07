@@ -51,7 +51,8 @@ version_variables = []
 upload_to_pypi = false
 build_command = ""
 allow_zero_version = true
-changelog = true
+changelog_file = "CHANGELOG.md"
+vcs_release = true
 
 [tool.semantic_release.branches.main]
 match = "(^main$)"
