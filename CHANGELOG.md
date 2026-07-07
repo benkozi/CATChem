@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v0.1.0-rc.2 (2026-07-07)
+
+### Bug Fixes
+
+- Trigger a change log ([#21](https://github.com/benkozi/CATChem/pull/21),
+  [`77e5e28`](https://github.com/benkozi/CATChem/commit/77e5e28402fbd2392d3468ffa8b075d7edda603b))
+
+
 ## v0.1.0-rc.1 (2026-07-07)
 
 ### Features
