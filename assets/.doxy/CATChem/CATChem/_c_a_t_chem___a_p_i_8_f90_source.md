@@ -11,6 +11,7 @@
 
 module catchem_api
    use precision_mod, only: fp
+   use constants, only : max_len_name, max_len_path
    use error_mod, only: cc_success, cc_failure, errormanagertype
    use catchemcore_mod, only: catchemcoretype, catchembuildertype
    use statemanager_mod, only: statemanagertype
@@ -26,6 +27,7 @@ module catchem_api
    use processinterface_mod, only: processinterface
    ! Import process registration functions
    use seasaltprocesscreator_mod, only: register_seasalt_process
+   use dustprocesscreator_mod, only: register_dust_process
    use drydepprocesscreator_mod, only: register_drydep_process
    use wetdepprocesscreator_mod, only: register_wetdep_process
    use settlingprocesscreator_mod, only: register_settling_process
@@ -47,8 +49,8 @@ module catchem_api
       logical :: initialized = .false.
       logical :: grid_setup = .false.
       logical :: enable_run_phase = .false.
-      character(len=512) :: config_file = ''
-      character(len=64), allocatable, public :: required_fields(:)
+      character(len=MAX_LEN_PATH) :: config_file = ''
+      character(len=MAX_LEN_NAME), allocatable, public :: required_fields(:)
       type(ErrorManagerType) :: error_manager
 
       ! Grid information
@@ -318,10 +320,13 @@ contains
             call this%error_manager%report_error(1014, 'Failed to register seasalt process', rc)
             call this%error_manager%pop_context()
          endif
-
-         ! Add more processes here as they become available
-         ! case ('dust')
-         !    call register_dust_process(process_mgr, rc)
+       case ('dust')
+         call register_dust_process(process_mgr, rc)
+         if (rc /= cc_success) then
+            call this%error_manager%push_context('model_register_process', 'registering dust process')
+            call this%error_manager%report_error(1014, 'Failed to register dust process', rc)
+            call this%error_manager%pop_context()
+         endif
        case ('drydep')
          call register_drydep_process(process_mgr, rc)
          if (rc /= cc_success) then
@@ -363,7 +368,7 @@ contains
        case default
          call this%error_manager%push_context('model_register_process', 'validating process type')
          call this%error_manager%report_error(1016, 'Unknown process type: ' // trim(process_name) // &
-            '. Supported processes: seasalt, drydep, wetdep, settling, so4chem, carbchem', rc)
+            '. Supported processes: seasalt, dust, drydep, wetdep, settling, so4chem, carbchem', rc)
          call this%error_manager%pop_context()
       end select
 
@@ -375,7 +380,7 @@ contains
       integer, intent(out) :: rc
 
       type(ProcessManagerType), pointer :: process_mgr => null()
-      character(len=64) :: temp_names(50)  ! Temporary array with max size
+      character(len=MAX_LEN_NAME) :: temp_names(50)  ! Temporary array with max size
       integer :: count, i
 
       rc = cc_success
@@ -412,7 +417,7 @@ contains
       integer :: num_processes
 
       type(ProcessManagerType), pointer :: process_mgr => null()
-      character(len=64) :: temp_names(50)  ! Temporary array with max size
+      character(len=MAX_LEN_NAME) :: temp_names(50)  ! Temporary array with max size
 
       num_processes = 0
 
@@ -681,7 +686,7 @@ contains
 
       type(DiagnosticManagerType), pointer :: diag_mgr => null()
       type(DiagnosticRegistryType), pointer :: registry => null()
-      character(len=64), allocatable :: process_list(:), field_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: process_list(:), field_names(:)
       integer :: num_processes, i, j, field_count, total_fields, name_idx
       integer :: local_rc
 
@@ -757,7 +762,7 @@ contains
       integer, intent(out) :: rc
 
       type(DiagnosticManagerType), pointer :: diag_mgr => null()
-      character(len=64) :: process_name, field_name
+      character(len=MAX_LEN_NAME) :: process_name, field_name
       integer :: local_rc, dot_pos, data_type
       real(fp) :: scalar_value
       real(fp), pointer :: array_1d_ptr(:) => null()
@@ -899,8 +904,8 @@ contains
    function model_get_diag_index_from_field(this, field_name) result(found_index)
       class(CATChem_Model), intent(inout) :: this
       character(len=*), intent(in) :: field_name
-      character(len=128), allocatable :: diagnostic_names(:)
-      character(len=128), allocatable :: diagnostic_fields(:)
+      character(len=MAX_LEN_NAME), allocatable :: diagnostic_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: diagnostic_fields(:)
       integer :: found_index, rc, i
 
       found_index = 0

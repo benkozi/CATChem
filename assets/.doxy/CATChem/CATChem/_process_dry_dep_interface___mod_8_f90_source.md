@@ -14,6 +14,7 @@ module processdrydepinterface_mod
 
    ! Core CATChem infrastructure
    use precision_mod, only: fp
+   use constants, only: max_len_name
    use processinterface_mod, only: processinterface, columnprocessinterface
    use statemanager_mod, only: statemanagertype
    use gridmanager_mod, only: gridmanagertype
@@ -288,7 +289,9 @@ contains
          call this%run_wesely_scheme_column(column, rc)
          if (rc /= cc_success) return
        case default
-         rc = cc_failure
+         call cc_error('Unknown drydep gas scheme "' // &
+            trim(this%process_config%drydep_config%gas_scheme), rc, &
+            thisloc='run_active_scheme_column (in module ProcessDryDepInterface_Mod.F90)')
          return
       end select
 
@@ -299,7 +302,9 @@ contains
        case ('zhang')
          call this%run_zhang_scheme_column(column, rc)
        case default
-         rc = cc_failure
+         call cc_error('Unknown drydep aerosol scheme "' // &
+            trim(this%process_config%drydep_config%aero_scheme), rc, &
+            thisloc='run_active_scheme_column (in module ProcessDryDepInterface_Mod.F90)')
       end select
 
    end subroutine run_active_scheme_column
@@ -567,6 +572,7 @@ contains
       ! Species properties
       real(fp), allocatable :: species_density(:)
       real(fp), allocatable :: species_radius(:)
+      logical, allocatable :: species_is_dust(:)
       logical, allocatable :: species_is_seasalt(:)
       real(fp), allocatable :: species_conc(:,:)
       real(fp), allocatable :: species_tendencies(:,:)
@@ -608,6 +614,7 @@ contains
       allocate(z0h(1))  ! Surface field - always scalar
       allocate(species_density(n_species))
       allocate(species_radius(n_species))
+      allocate(species_is_dust(n_species))
       allocate(species_is_seasalt(n_species))
       species_tendencies = 0.0_fp
 
@@ -643,6 +650,8 @@ contains
       ! Use species properties from process configuration
       species_radius(1:n_species) = this%process_config%drydep_config%species_radius(1:n_species)
       ! Use species properties from process configuration
+      species_is_dust(1:n_species) = this%process_config%drydep_config%species_is_dust(1:n_species)
+      ! Use species properties from process configuration
       species_is_seasalt(1:n_species) = this%process_config%drydep_config%species_is_seasalt(1:n_species)
 
       ! Call the science scheme with optional diagnostic parameters
@@ -670,6 +679,7 @@ contains
             z0h(1)            , &
             species_density, &
             species_radius, &
+            species_is_dust, &
             species_is_seasalt, &
             species_conc, &
             species_tendencies, &
@@ -698,6 +708,7 @@ contains
             z0h(1)            , &
             species_density, &
             species_radius, &
+            species_is_dust, &
             species_is_seasalt, &
             species_conc, &
             species_tendencies, &
@@ -959,13 +970,13 @@ contains
 
 
 
-   function get_required_met_fields(this) result(field_names)
+   subroutine get_required_met_fields(this, field_names)
       class(ProcessDryDepInterface), intent(in) :: this
-      character(len=32), allocatable :: field_names(:)
-      character(len=32), allocatable :: process_fields(:)
-      character(len=32), allocatable :: gas_scheme_fields(:), aero_scheme_fields(:)
+      character(len=MAX_LEN_NAME), allocatable, intent(out) :: field_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: process_fields(:)
+      character(len=MAX_LEN_NAME), allocatable :: gas_scheme_fields(:), aero_scheme_fields(:)
       integer :: gas_scheme_count, aero_scheme_count
-      character(len=32), allocatable :: unique_fields(:)
+      character(len=MAX_LEN_NAME), allocatable :: unique_fields(:)
       integer :: total_fields, process_count, i, j, unique_count
       logical :: is_duplicate
 
@@ -1098,11 +1109,11 @@ contains
       if (allocated(gas_scheme_fields)) deallocate(gas_scheme_fields)
       if (allocated(aero_scheme_fields)) deallocate(aero_scheme_fields)
 
-   end function get_required_met_fields
+   end subroutine get_required_met_fields
 
    function get_required_diagnostic_fields(this) result(field_names)
       class(ProcessDryDepInterface), intent(in) :: this
-      character(len=64), allocatable :: field_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: field_names(:)
 
       allocate(field_names(2))
       field_names(1) = 'drydep_con_per_species'
@@ -1121,7 +1132,7 @@ contains
       type(DiagnosticManagerType), pointer :: diag_mgr
       type(DiagnosticRegistryType), pointer :: registry
       type(GridManagerType), pointer :: grid_mgr
-      character(len=256) :: field_name  ! For constructing species-specific field names
+      character(len=MAX_LEN_NAME) :: field_name  ! For constructing species-specific field names
       integer :: i  ! Loop variable for diagnostic species
       integer :: nx, ny, nz
       integer :: n_species
@@ -1255,7 +1266,7 @@ contains
 
       integer :: i_col, j_col  ! Column grid position
       integer :: i  ! Loop variable for diagnostic species
-      character(len=256) :: field_name  ! For constructing species-specific field names
+      character(len=MAX_LEN_NAME) :: field_name  ! For constructing species-specific field names
 
       rc = cc_success
 
@@ -1334,7 +1345,7 @@ contains
    function get_drydep_scheme(this, gas_scheme) result(scheme_name)
       class(ProcessDryDepInterface), intent(in) :: this
       logical, intent(in), optional :: gas_scheme
-      character(len=64) :: scheme_name
+      character(len=MAX_LEN_NAME) :: scheme_name
 
       logical :: is_gas
 

@@ -14,6 +14,7 @@ module processwetdepinterface_mod
 
    ! Core CATChem infrastructure
    use precision_mod, only: fp
+   use constants, only: max_len_name
    use processinterface_mod, only: processinterface, columnprocessinterface
    use statemanager_mod, only: statemanagertype
    use gridmanager_mod, only: gridmanagertype
@@ -282,7 +283,9 @@ contains
        case ('jacob')
          call this%run_jacob_scheme_column(column, rc)
        case default
-         rc = cc_failure
+         call cc_error('Unknown wetdep scheme "' // &
+            trim(this%process_config%wetdep_config%scheme), rc, &
+            thisloc='run_active_scheme_column (in module ProcessWetDepInterface_Mod.F90)')
       end select
 
    end subroutine run_active_scheme_column
@@ -312,6 +315,7 @@ contains
       logical, allocatable :: species_wd_LiqAndGas(:)
       real(fp), allocatable :: species_wd_convfacI2G(:)
       real(fp), allocatable :: species_wd_rainouteff(:,:)
+      real(fp), allocatable :: species_wd_reevap_frac(:)
       real(fp), allocatable :: species_radius(:)
       real(fp), allocatable :: species_mw_g(:)
       real(fp), allocatable :: species_conc(:,:)
@@ -354,6 +358,7 @@ contains
       allocate(species_wd_liqandgas(n_species))
       allocate(species_wd_convfaci2g(n_species))
       allocate(species_wd_rainouteff(n_species, 3))
+      allocate(species_wd_reevap_frac(n_species))
       allocate(species_radius(n_species))
       allocate(species_mw_g(n_species))
       species_tendencies = 0.0_fp
@@ -399,6 +404,8 @@ contains
       ! Use species properties from process configuration
       species_wd_rainouteff(1:n_species, :) = this%process_config%wetdep_config%species_wd_rainouteff(1:n_species, :)
       ! Use species properties from process configuration
+      species_wd_reevap_frac(1:n_species) = this%process_config%wetdep_config%species_wd_reevap_frac(1:n_species)
+      ! Use species properties from process configuration
       species_radius(1:n_species) = this%process_config%wetdep_config%species_radius(1:n_species)
       ! Use species properties from process configuration
       species_mw_g(1:n_species) = this%process_config%wetdep_config%species_mw_g(1:n_species)
@@ -430,6 +437,7 @@ contains
             species_wd_liqandgas, &
             species_wd_convfaci2g, &
             species_wd_rainouteff, &
+            species_wd_reevap_frac, &
             species_radius, &
             species_mw_g, &
             species_conc, &
@@ -460,6 +468,7 @@ contains
             species_wd_liqandgas, &
             species_wd_convfaci2g, &
             species_wd_rainouteff, &
+            species_wd_reevap_frac, &
             species_radius, &
             species_mw_g, &
             species_conc, &
@@ -481,12 +490,12 @@ contains
 
 
 
-   function get_required_met_fields(this) result(field_names)
+   subroutine get_required_met_fields(this, field_names)
       class(ProcessWetDepInterface), intent(in) :: this
-      character(len=32), allocatable :: field_names(:)
-      character(len=32), allocatable :: scheme_fields(:)
-      character(len=32), allocatable :: process_fields(:)
-      character(len=32), allocatable :: unique_fields(:)
+      character(len=MAX_LEN_NAME), allocatable, intent(out) :: field_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: scheme_fields(:)
+      character(len=MAX_LEN_NAME), allocatable :: process_fields(:)
+      character(len=MAX_LEN_NAME), allocatable :: unique_fields(:)
       integer :: total_fields, scheme_count, process_count, i, j, unique_count
       logical :: is_duplicate
 
@@ -548,11 +557,11 @@ contains
       if (allocated(process_fields)) deallocate(process_fields)
       if (allocated(scheme_fields)) deallocate(scheme_fields)
 
-   end function get_required_met_fields
+   end subroutine get_required_met_fields
 
    function get_required_diagnostic_fields(this) result(field_names)
       class(ProcessWetDepInterface), intent(in) :: this
-      character(len=64), allocatable :: field_names(:)
+      character(len=MAX_LEN_NAME), allocatable :: field_names(:)
 
       allocate(field_names(2))
       field_names(1) = 'wetdep_mass_per_species_per_level'
@@ -571,7 +580,7 @@ contains
       type(DiagnosticManagerType), pointer :: diag_mgr
       type(DiagnosticRegistryType), pointer :: registry
       type(GridManagerType), pointer :: grid_mgr
-      character(len=256) :: field_name  ! For constructing species-specific field names
+      character(len=MAX_LEN_NAME) :: field_name  ! For constructing species-specific field names
       integer :: i  ! Loop variable for diagnostic species
       integer :: nx, ny, nz
       integer :: dims_2d(2)
@@ -682,7 +691,7 @@ contains
 
       integer :: i_col, j_col  ! Column grid position
       integer :: i  ! Loop variable for diagnostic species
-      character(len=256) :: field_name  ! For constructing species-specific field names
+      character(len=MAX_LEN_NAME) :: field_name  ! For constructing species-specific field names
 
       rc = cc_success
 
@@ -734,7 +743,7 @@ contains
 
    function get_wetdep_scheme(this) result(scheme_name)
       class(ProcessWetDepInterface), intent(in) :: this
-      character(len=64) :: scheme_name
+      character(len=MAX_LEN_NAME) :: scheme_name
 
       scheme_name = trim(this%process_config%wetdep_config%scheme)
 
