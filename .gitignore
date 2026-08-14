@@ -9,6 +9,11 @@ docs2/latex/
 # Mac
 .DS_Store
 ._.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
 
 # Possible non-default docs build dir
 docs/_build/
@@ -169,6 +174,14 @@ cython_debug/
 
 # Kiro
 .kiro/
+.specs/
+specs/
+specify/
+.specify/
+docs/superpowers/
+.gemini/
+.github/agents/
+.github/prompts/
 
 # PyCharm
 #  JetBrains specific template is maintainted in a separate JetBrains.gitignore that can
