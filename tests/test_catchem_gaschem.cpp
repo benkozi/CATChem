@@ -37,19 +37,19 @@ int main(int argc, char* argv[]) {
         // 2. Set up core and states
         int n_cols = 1;
         int n_levels = 3;
-        int n_species = 5;
+        int n_species = 4; // matches tests/fixtures/mechanisms/chapman.yml
 
         auto core = std::make_shared<catchem::Core>(n_cols, n_levels, n_species);
         auto state = core->get_state_manager();
 
         // Time setup (Noon, summer)
-        state->time.year = 2026;
-        state->time.month = 7;
-        state->time.day = 13;
-        state->time.hour = 12;
-        state->time.minute = 0;
-        state->time.second = 0;
-        state->time.calculate_derived_fields();
+        state->clock().year = 2026;
+        state->clock().month = 7;
+        state->clock().day = 13;
+        state->clock().hour = 12;
+        state->clock().minute = 0;
+        state->clock().second = 0;
+        state->clock().calculate_derived_fields();
 
         // Meteorological arrays
         std::vector<double> lat(n_cols, 40.0);
@@ -76,10 +76,11 @@ int main(int argc, char* argv[]) {
         state->bind_met_field_3d("PMID", pedge.data()); // PMID maps to PMID in tests
         state->bind_met_field_3d("BXHEIGHT", bxheight.data());
 
-        // Load species metadata explicitly using configured header
-        std::string species_config = std::string(catchem::test::TEST_DIR) + "/Configs/Default/CATChem_species.yml";
-        assert(file_exists(species_config) &&
-               "ERROR: Could not find CATChem_species.yml at the explicit test directory location!");
+        // Load a mechanism whose species mirror chapman v0 (so every CATChem
+        // species maps into the MICM variable map) and that carries the
+        // photolysis.ozone role the photolysis contract requires.
+        std::string species_config = std::string(catchem::test::TEST_DIR) + "/fixtures/mechanisms/chapman.yml";
+        assert(file_exists(species_config) && "ERROR: Could not find the chapman mechanism fixture!");
         state->load_species_config(species_config);
         std::vector<double> conc_data(n_cols * n_levels * n_species, 1.0); // 1.0 ppmv initially
         state->bind_unified_chemistry(conc_data.data());
@@ -105,9 +106,9 @@ int main(int argc, char* argv[]) {
         main_conf_writer << "    config_dir: \"" << gaschem_config_dir << "\"\n";
         main_conf_writer.close();
 
-        state->config_file_path = temp_main_coupled_config;
-        if (state->config_mgr) {
-            state->config_mgr->load_from_file(temp_main_coupled_config);
+        state->set_configuration_path(temp_main_coupled_config);
+        if (state->config_manager()) {
+            state->config_manager()->load_from_file(temp_main_coupled_config);
         }
 
         // 4. Create and add processes to core pipeline

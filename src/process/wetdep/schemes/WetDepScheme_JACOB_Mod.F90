@@ -28,10 +28,11 @@
 !!
 module WetDepScheme_JACOB_Mod
 
-   use precision_mod, only: fp, zero, one, rae, TINY_
-   use error_mod, only: CC_Warning, CC_SUCCESS !CC_Error
+   use catchem_bridge_precision, only: fp, zero, one, rae, TINY_
+   use catchem_bridge_error, only: CC_Warning, CC_SUCCESS !CC_Error
    use WetDepCommon_Mod, only: WetDepSchemeJACOBConfig
-   use Constants, only: g0, AIRMW  !load the constants needed for this scheme
+   use catchem_bridge_constants, only: g0, AIRMW  !load the constants needed for this scheme
+   use, intrinsic :: ieee_arithmetic, only: ieee_is_nan
 
    implicit none
    private
@@ -126,8 +127,8 @@ contains
       real(fp), intent(in) :: airden_dry(num_layers)    ! 3D atmospheric field
       real(fp), intent(in) :: mairden(num_layers)    ! 3D atmospheric field
       real(fp), intent(in) :: pedge(num_layers+1)  ! Edge field - requires nz+1 dimensions
-      real(fp), intent(in) :: pfilsan(num_layers+1)    ! 3D atmospheric field
-      real(fp), intent(in) :: pfllsan(num_layers+1)    ! 3D atmospheric field
+      real(fp), intent(in) :: pfilsan(num_layers+1)  ! interface ice nonconvective precipitation flux
+      real(fp), intent(in) :: pfllsan(num_layers+1)  ! interface liquid nonconvective precipitation flux
       real(fp), intent(in) :: reevapls(num_layers)    ! 3D atmospheric field
       real(fp), intent(in) :: t(num_layers)    ! 3D atmospheric field
       real(fp), intent(in) :: tstep  ! Time step [s] - from process interface
@@ -248,30 +249,27 @@ contains
          !   pdwn(k) = kg_to_cm3_liq * pfllsan(k) + kg_to_cm3_ice * pfilsan(k)
          !else
 
-         !Here we follow GOCART with an additional index; otherwise, uncomment the if else statement above
-         ! -- liquid/ice precipitation formation in grid cell (kg/m2/s)
+         ! PFLLSAN/PFILSAN are interface fluxes.  Their Fortran 1:nlev+1
+         ! bounds correspond to the host's 0:nlev interface range; use the
+         ! flux divergence across this layer rather than dropping an edge.
          dqls = pfllsan(k) - pfllsan(km1)
          dqis = pfilsan(k) - pfilsan(km1)
          ! -- GOCART-style precip-formation flux divergence [kg/m2/s] (>0 forming, <0 evaporating)
          !    used by the sulfate resuspension branch in washout_loss
          dprecip(k) = dqls + dqis
-         ! -- precipitation flux from upper level (convert from kg/m2/s to cm3/cm2/s)
+         ! -- precipitation flux entering from the upper interface
          pdwn(k) = kg_to_cm3_liq * pfllsan(km1) + kg_to_cm3_ice * pfilsan(km1)
 
          !end if ! if (k == ktop)
 
-         delp = pedge(k) - pedge(km1)
-         dpog(k) = delp / g0
-         delz = dpog(k) / mairden(k) ! thickness of layer [m]
+         delp = abs(pedge(k) - pedge(km1))
+         dpog(k) = max(1.0e-12_fp, delp / g0)
+         delz = dpog(k) / max(1.0e-6_fp, mairden(k)) ! thickness of layer [m]
          delz_cm(k) = delz * m_to_cm  ! thickness of layer [cm]
 
-         ! -- liquid/ice precipitation formation in grid cell (kg/m2/s)
-         !dqls = pfllsan(k) - pfllsan(km1)
-         !dqis = pfilsan(k) - pfilsan(km1)
-
          ! -- convert from kg/m2/s to kg (H2O) / m3(air) / s
-         dqls_kgm3s = dqls / delz
-         dqis_kgm3s = dqis / delz
+         dqls_kgm3s = dqls / max(1.0e-6_fp, delz)
+         dqis_kgm3s = dqis / max(1.0e-6_fp, delz)
 
          ! -- total precipitation formation (convert from kg (H2O) / m3(air) / s to cm3 (H2O) / cm3 (air) /s)
          ! -- To convert from kg (H2O) / m3(air) / s to cm3 (H2O) / cm3 (air) / s, divide by the density of
@@ -279,17 +277,18 @@ contains
          qq(k) =  dqls_kgm3s / density_liq +  dqis_kgm3s / density_ice
          reevap(k) = reevapls(k) * (airden_dry(k) / 1000.0_fp) ! convert from kg/kg/s to cm3/cm3/s
 
-         ! -- precipitation flux from upper level (convert from kg/m2/s to cm3/cm2/s)
-         !pdwn(k) = kg_to_cm3_liq * pfllsan(km1) + kg_to_cm3_ice * pfilsan(km1)
-
          ! -- initialize concentrations array, converting from kg/kg to kg/m2
          !this seems for both gas and aerosol
          !SO2(k)  = conc_in(k) !already assigned before the loop
          SO4(k)  = SO4(k) * dpog(k)
 
          ! -- compute mixing ratio of saturated water vapour over ice (from SETUP_WETSCAV)
-         press     = 0.5_fp * ( pedge(km1) + pedge(k) ) !pressure in grid box
-         c_h2o(k) = 10._fp ** (-2663.5_fp / t(k) + 12.537_fp ) / press
+         press     = max(1.0_fp, 0.5_fp * ( pedge(km1) + pedge(k) )) !pressure in grid box
+         if (t(k) > 50.0_fp) then
+            c_h2o(k) = 10._fp ** (-2663.5_fp / t(k) + 12.537_fp ) / press
+         else
+            c_h2o(k) = zero
+         end if
 
          ! -- estimate cloud ice and liquid water content (from SETUP_WETSCAV)
          if ( t(k) >= 268.0_fp ) then
@@ -436,10 +435,18 @@ contains
          do k = kbot, ktop
 
             ! -- convert back to ug/kg or ppmv and compute the TENDENCY (rate of change per second)
-            if (species_is_aerosol(species_idx)) then
-               species_tendencies(k, species_idx) = ( (max(0.0_fp, conc(k)) / dpog(k) * 1.0e9_fp) - species_conc(k, species_idx) ) / dt
+            if (dpog(k) > 0.0_fp .and. dt > 0.0_fp) then
+               if (species_is_aerosol(species_idx)) then
+                  species_tendencies(k, species_idx) = ( (max(0.0_fp, conc(k)) / dpog(k) * 1.0e9_fp) - species_conc(k, species_idx) ) / dt
+               else
+                  if (species_mw_g(species_idx) > 0.0_fp) then
+                     species_tendencies(k, species_idx) = ( (max(0.0_fp, conc(k)) / dpog(k) * AIRMW / species_mw_g(species_idx) * 1.0e6_fp) - species_conc(k, species_idx) ) / dt
+                  else
+                     species_tendencies(k, species_idx) = 0.0_fp
+                  end if
+               end if
             else
-               species_tendencies(k, species_idx) = ( (max(0.0_fp, conc(k)) / dpog(k) * AIRMW / species_mw_g(species_idx) * 1.0e6_fp) - species_conc(k, species_idx) ) / dt
+               species_tendencies(k, species_idx) = 0.0_fp
             end if
 
             ! Update diagnostic fields here based on your scheme's requirements
@@ -460,7 +467,11 @@ contains
                do diag_idx = 1, size(diagnostic_species_id)
                   if (diagnostic_species_id(diag_idx) == species_idx) then
                      ! Add your custom wet deposition flux per species per level calculation
-                     wetdep_flux_per_species_per_level(k, diag_idx) = dconc(k) / dt
+                     if (dt > 0.0_fp) then
+                        wetdep_flux_per_species_per_level(k, diag_idx) = dconc(k) / dt
+                     else
+                        wetdep_flux_per_species_per_level(k, diag_idx) = 0.0_fp
+                     end if
                      exit
                   end if
                end do
@@ -478,14 +489,16 @@ contains
       ! species' updated concentration so the sulfur is conserved as sulfate
       ! (matching GOCART's SU_Wet_Removal, which adds it to the prognostic SO4).
       ! ------------------------------------------------------------------
-      if (so4_id >= 1) then
+      if (so4_id >= 1 .and. dt > 0.0_fp) then
          do k = kbot, ktop
-            ! sulfate produced from SO2 = current local SO4 minus its initial column value
-            so4_prod = SO4(k) - species_conc(k, so4_id) * 1.e-09_fp * dpog(k)
-            if (so4_prod > zero) then
-               ! convert the [kg/m2] production back to [ug/kg] tendency (divided by dt) and add to SO4 tendency
-               species_tendencies(k, so4_id) = species_tendencies(k, so4_id) &
-                  + (so4_prod / dpog(k) * 1.0e9_fp) / dt
+            if (dpog(k) > 0.0_fp) then
+               ! sulfate produced from SO2 = current local SO4 minus its initial column value
+               so4_prod = SO4(k) - species_conc(k, so4_id) * 1.e-09_fp * dpog(k)
+               if (so4_prod > zero) then
+                  ! convert the [kg/m2] production back to [ug/kg] tendency (divided by dt) and add to SO4 tendency
+                  species_tendencies(k, so4_id) = species_tendencies(k, so4_id) &
+                     + (so4_prod / dpog(k) * 1.0e9_fp) / dt
+               end if
             end if
          end do
       end if
@@ -500,16 +513,18 @@ contains
       ! and already includes H2O2's own gas-phase wet removal, so we only need to
       ! remove the additional limiter consumption here (floored at zero).
       ! ------------------------------------------------------------------
-      if (h2o2_id >= 1) then
-         do k = kbot, ktop
-            ! H2O2 consumed = initial - final local working value, in [kg/kg]
-            h2o2_used = species_conc(k, h2o2_id) * species_mw_g(h2o2_id) * 1.0e-6_fp / AIRMW - H2O2(k)
-            if (h2o2_used > zero) then
-               ! convert the consumed [kg/kg] back to [ppmv] tendency (divided by dt) and remove from H2O2 tendency
-               species_tendencies(k, h2o2_id) = species_tendencies(k, h2o2_id) &
-                  - (h2o2_used * AIRMW / species_mw_g(h2o2_id) * 1.0e6_fp) / dt
-            end if
-         end do
+      if (h2o2_id >= 1 .and. dt > 0.0_fp) then
+         if (species_mw_g(h2o2_id) > 0.0_fp) then
+            do k = kbot, ktop
+               ! H2O2 consumed = initial - final local working value, in [kg/kg]
+               h2o2_used = species_conc(k, h2o2_id) * species_mw_g(h2o2_id) * 1.0e-6_fp / AIRMW - H2O2(k)
+               if (h2o2_used > zero) then
+                  ! convert the consumed [kg/kg] back to [ppmv] tendency (divided by dt) and remove from H2O2 tendency
+                  species_tendencies(k, h2o2_id) = species_tendencies(k, h2o2_id) &
+                     - (h2o2_used * AIRMW / species_mw_g(h2o2_id) * 1.0e6_fp) / dt
+               end if
+            end do
+         end if
       end if
 
       deallocate(qq, pdwn, conc, dconc, dpog, delz_cm, c_h2o, cldice, cldliq, SO2, SO4, H2O2, reevap, dprecip)
@@ -679,7 +694,7 @@ contains
 
          ! -- fraction of species in liquid and ice phases (guarded against overflow/NaN)
          c_tot = one + l2g + i2g
-         if ( c_tot /= c_tot .or. c_tot >= 1.0e10_fp ) then
+         if ( ieee_is_nan(c_tot) .or. c_tot >= 1.0e10_fp ) then
             if ( l2g >= i2g ) then
                f_l = one
                f_i = zero
@@ -1051,7 +1066,7 @@ contains
          l2g = liq_to_gas_ratio( k0, cr, pKa, tk, qliq )
 
          ! -- washout fraction from Henry's Law (guarded against overflow/NaN)
-         if ( l2g /= l2g .or. l2g >= 1.0e10_fp ) then
+         if ( ieee_is_nan(l2g) .or. l2g >= 1.0e10_fp ) then
             washfrac = one
          else
             washfrac = l2g / ( one + l2g )

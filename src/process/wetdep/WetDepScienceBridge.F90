@@ -1,7 +1,7 @@
 module WetDepScienceBridge_Mod
    use iso_c_binding, only: c_ptr, c_f_pointer, c_double, c_char, c_associated, c_bool, c_int
-   use Precision_Mod, only: fp
-   use Constants, only: g0, AIRMW
+   use catchem_bridge_precision, only: fp
+   use catchem_bridge_constants, only: g0, AIRMW
    use WetDepCommon_Mod, only: WetDepSchemeJACOBConfig
    use WetDepScheme_JACOB_Mod, only: compute_jacob
    implicit none
@@ -10,6 +10,7 @@ contains
    subroutine run_wetdep_science_bridge( &
       n_cols, n_levels, n_species, dt, &
       diagnostics, &
+      jacob_scale_factor, jacob_radius_threshold, jacob_so4_gocart_resusp, jacob_so4_washout_eff, &
    ! 3D Met Pointers
       c_airden_dry, c_mairden, c_pedge, c_pfilsan, c_pfllsan, c_reevapls, c_t_air, &
    ! Metadata
@@ -24,6 +25,12 @@ contains
       integer(c_int), value :: n_cols, n_levels, n_species
       real(c_double), value :: dt
       integer(c_int), value :: diagnostics
+
+      ! Scheme tuning options staged by WetDepProcess::init from the runtime
+      ! YAML.  The C++ layer owns parsing and validation; the bridge only
+      ! applies them onto the Jacob configuration type.
+      real(c_double), value :: jacob_scale_factor, jacob_radius_threshold, jacob_so4_washout_eff
+      integer(c_int), value :: jacob_so4_gocart_resusp
 
       ! C pointers
       type(c_ptr), value :: c_airden_dry, c_mairden, c_pedge, c_pfilsan, c_pfllsan, c_reevapls, c_t_air
@@ -59,6 +66,8 @@ contains
       real(fp) :: f_airden_dry(n_levels)
       real(fp) :: f_mairden(n_levels)
       real(fp) :: f_pedge(n_levels+1)
+      ! Precipitation fluxes live on vertical interfaces (the host's 0:nlev
+      ! index range maps to this Fortran 1:nlev+1 range).
       real(fp) :: f_pfilsan(n_levels+1)
       real(fp) :: f_pfllsan(n_levels+1)
       real(fp) :: f_reevapls(n_levels)
@@ -85,25 +94,58 @@ contains
 
       type(WetDepSchemeJACOBConfig) :: jacob_config
 
+      ! Apply the YAML tuning options staged by the C++ process layer onto
+      ! the Jacob configuration so wet deposition no longer runs on compiled
+      ! defaults.
+      jacob_config%scale_factor = real(jacob_scale_factor, fp)
+      jacob_config%radius_threshold = real(jacob_radius_threshold, fp)
+      jacob_config%so4_gocart_resusp = (jacob_so4_gocart_resusp /= 0)
+      jacob_config%so4_washout_eff = real(jacob_so4_washout_eff, fp)
+
       ! Map pointers
-      call c_f_pointer(c_airden_dry, airden_dry, [n_cols, n_levels])
-      call c_f_pointer(c_mairden,    mairden,    [n_cols, n_levels])
-      call c_f_pointer(c_pedge,      pedge,      [n_cols, n_levels+1])
-      call c_f_pointer(c_pfilsan,    pfilsan,    [n_cols, n_levels+1])
-      call c_f_pointer(c_pfllsan,    pfllsan,    [n_cols, n_levels+1])
-      call c_f_pointer(c_reevapls,   reevapls,   [n_cols, n_levels])
-      call c_f_pointer(c_t_air,      t_air,      [n_cols, n_levels])
+      nullify(airden_dry, mairden, pedge, pfilsan, pfllsan, reevapls, t_air)
+      nullify(conc, tendency, diag_mass, diag_flux)
+
+      if (.not. c_associated(c_airden_dry) .and. .not. c_associated(c_mairden)) then
+         write(*,'(A)') 'FATAL ERROR: WetDepScienceBridge missing required field AIRDEN / AIRDEN_DRY'
+         call flush(6)
+         error stop "FATAL ERROR: WetDepScienceBridge missing required field AIRDEN"
+      end if
+      if (.not. c_associated(c_pedge)) then
+         write(*,'(A)') 'FATAL ERROR: WetDepScienceBridge missing required field PEDGE'
+         call flush(6)
+         error stop "FATAL ERROR: WetDepScienceBridge missing required field PEDGE"
+      end if
+      if (.not. c_associated(c_t_air)) then
+         write(*,'(A)') 'FATAL ERROR: WetDepScienceBridge missing required field T'
+         call flush(6)
+         error stop "FATAL ERROR: WetDepScienceBridge missing required field T"
+      end if
+      if (.not. c_associated(c_conc) .or. .not. c_associated(c_tendency)) then
+         write(*,'(A)') 'FATAL ERROR: WetDepScienceBridge missing required concentration or tendency pointers'
+         call flush(6)
+         error stop "FATAL ERROR: WetDepScienceBridge missing required concentration or tendency pointers"
+      end if
+
+      if (c_associated(c_airden_dry)) call c_f_pointer(c_airden_dry, airden_dry, [n_cols, n_levels])
+      if (c_associated(c_mairden))    call c_f_pointer(c_mairden,    mairden,    [n_cols, n_levels])
+      if (c_associated(c_pedge))      call c_f_pointer(c_pedge,      pedge,      [n_cols, n_levels+1])
+      if (c_associated(c_pfilsan))    call c_f_pointer(c_pfilsan,    pfilsan,    [n_cols, n_levels+1])
+      if (c_associated(c_pfllsan))    call c_f_pointer(c_pfllsan,    pfllsan,    [n_cols, n_levels+1])
+      if (c_associated(c_reevapls))   call c_f_pointer(c_reevapls,   reevapls,   [n_cols, n_levels])
+      if (c_associated(c_t_air))      call c_f_pointer(c_t_air,      t_air,      [n_cols, n_levels])
 
       call c_f_pointer(c_conc,     conc,     [n_cols, n_levels, n_species])
       call c_f_pointer(c_tendency, tendency, [n_cols, n_levels, n_species])
 
       if (diagnostics /= 0) then
-         call c_f_pointer(c_diag_mass, diag_mass, [n_cols, n_levels, n_species])
-         call c_f_pointer(c_diag_flux, diag_flux, [n_cols, n_levels, n_species])
+         if (c_associated(c_diag_mass)) call c_f_pointer(c_diag_mass, diag_mass, [n_cols, n_levels, n_species])
+         if (c_associated(c_diag_flux)) call c_f_pointer(c_diag_flux, diag_flux, [n_cols, n_levels, n_species])
       end if
 
       ! Extract real species names from flat char array passed via BIND(C)
       do i = 1, n_species
+         dummy_sp_names(i) = ""
          do j = 1, 32
             dummy_sp_names(i)(j:j) = species_names(j, i)
          end do
@@ -125,15 +167,30 @@ contains
 
       ! Iterate columns
       do icol = 1, n_cols
-         f_airden_dry   = real(airden_dry(icol, :), fp)
-         f_mairden      = real(mairden(icol, :), fp)
-         f_pedge        = real(pedge(icol, :), fp)
-         f_pfilsan      = real(pfilsan(icol, :), fp)
-         f_pfllsan      = real(pfllsan(icol, :), fp)
-         f_reevapls     = real(reevapls(icol, :), fp)
-         f_t_air        = real(t_air(icol, :), fp)
+         if (associated(airden_dry)) then
+            f_airden_dry = real(airden_dry(icol, :), fp)
+         else
+            f_airden_dry = real(mairden(icol, :), fp)
+         end if
 
-         f_conc         = real(conc(icol, :, :), fp)
+         if (associated(mairden)) then
+            f_mairden = real(mairden(icol, :), fp)
+         else
+            f_mairden = f_airden_dry
+         end if
+
+         f_pedge = real(pedge(icol, :), fp)
+         f_t_air = real(t_air(icol, :), fp)
+
+         if (associated(pfilsan))    then; f_pfilsan  = real(pfilsan(icol, :), fp);  else; f_pfilsan  = 0.0_fp; end if
+         if (associated(pfllsan))    then; f_pfllsan  = real(pfllsan(icol, :), fp);  else; f_pfllsan  = 0.0_fp; end if
+         if (associated(reevapls))   then; f_reevapls = real(reevapls(icol, :), fp); else; f_reevapls = 0.0_fp; end if
+
+         ! Extract input concentrations (already in ug/kg for aerosols, ppmv for gases)
+         do ispec = 1, n_species
+            f_conc(:, ispec) = real(conc(icol, :, ispec), fp)
+         end do
+
          col_tendencies = 0.0_fp
          col_diag_mass  = 0.0_fp
          col_diag_flux  = 0.0_fp
@@ -151,18 +208,23 @@ contains
             wetdep_flux_per_species_per_level=col_diag_flux, &
             diagnostic_species_id=diagnostic_species_id)
 
-         ! Convert tendencies from process-specific units (ug/kg/s or ppm/s) to kg/kg/s
+         ! compute_jacob returns a finite-step tendency in the native
+         ! aerosol (ug/kg/s) or gas (ppmv/s) units.  Apply it to the
+         ! concentration state while preserving species with zero tendency.
+         !
+         ! The new concentration is clamped at zero to reproduce upstream's
+         ! contract exactly: upstream compute_jacob stores max(0, conc) as the
+         ! REPLACEMENT value and the interface assigns new_conc = tendency.
+         ! Here the scheme returns a rate ((new-old)/dt), so old + dt*rate
+         ! reconstructs the same new value, but the round-trip through /dt then
+         ! *dt (and the SO4 production term added after the max(0,.) clamp) can
+         ! undershoot below zero.  The max(0,.) below restores the positivity
+         ! guarantee upstream has, eliminating negative concentrations.
          do ispec = 1, n_species
-            if ( f_is_aerosol(ispec) ) then
-               col_tendencies(:, ispec) = col_tendencies(:, ispec) * 1.0e-9_fp
-            else
-               col_tendencies(:, ispec) = col_tendencies(:, ispec) * 1.0e-6_fp * (f_mw_g(ispec) / AIRMW)
-            end if
+            tendency(icol, :, ispec) = real(col_tendencies(:, ispec), c_double)
+            conc(icol, :, ispec) = max( 0.0_c_double, &
+               conc(icol, :, ispec) + real(dt * col_tendencies(:, ispec), c_double) )
          end do
-
-         ! Write tendencies and concentrations back in-place (casting to c_double)
-         tendency(icol, :, :) = real(col_tendencies, c_double)
-         conc(icol, :, :) = conc(icol, :, :) + real(dt * col_tendencies, c_double)
 
          if (diagnostics /= 0) then
             diag_mass(icol, :, :) = real(col_diag_mass, c_double)

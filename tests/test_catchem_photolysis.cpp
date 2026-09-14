@@ -36,19 +36,19 @@ int main(int argc, char* argv[]) {
         // 2. Set up core with a single column and vertical grid matching config (3 levels -> 4 edges)
         int n_cols = 1;
         int n_levels = 3;
-        int n_species = 5;
+        int n_species = 4; // matches tests/fixtures/mechanisms/chapman.yml
 
         auto core = std::make_shared<catchem::Core>(n_cols, n_levels, n_species);
         auto state = core->get_state_manager();
 
         // Configure the simulation time to be noon (12:00 PM) during summer to ensure positive solar radiation
-        state->time.year = 2026;
-        state->time.month = 7;
-        state->time.day = 13;
-        state->time.hour = 12; // Noon
-        state->time.minute = 0;
-        state->time.second = 0;
-        state->time.calculate_derived_fields();
+        state->clock().year = 2026;
+        state->clock().month = 7;
+        state->clock().day = 13;
+        state->clock().hour = 12; // Noon
+        state->clock().minute = 0;
+        state->clock().second = 0;
+        state->clock().calculate_derived_fields();
 
         // 3. Define mock Meteorological profiles
         std::vector<double> lat(n_cols, 40.0);
@@ -75,6 +75,17 @@ int main(int argc, char* argv[]) {
         state->bind_met_field_3d("PEDGE", pedge.data());
         state->bind_met_field_3d("BXHEIGHT", bxheight.data());
 
+        // 3b. The photolysis process contract now requires the CONCENTRATION
+        // field and a mechanism carrying the photolysis.ozone role, and run()
+        // requires AIRDEN_DRY/PMID to be present. Bind them all.
+        std::string species_config = std::string(catchem::test::TEST_DIR) + "/fixtures/mechanisms/chapman.yml";
+        assert(file_exists(species_config) && "ERROR: Could not find the chapman mechanism fixture!");
+        state->load_species_config(species_config);
+        state->bind_met_field_3d("AIRDEN_DRY", airden.data());
+        state->bind_met_field_3d("PMID", pedge.data());
+        std::vector<double> conc_data(n_cols * n_levels * n_species, 1.0e-7);
+        state->bind_unified_chemistry(conc_data.data());
+
         // 4. Resolve the TUV-x configuration file path explicitly using configured header
         std::string config_path =
             std::string(catchem::test::SOURCE_DIR) + "/src/external/musica/configs/tuvx/from_host/config.json";
@@ -93,9 +104,9 @@ int main(int argc, char* argv[]) {
         main_conf_writer.close();
 
         // Propagate config file path
-        state->config_file_path = temp_main_config;
-        if (state->config_mgr) {
-            state->config_mgr->load_from_file(temp_main_config);
+        state->set_configuration_path(temp_main_config);
+        if (state->config_manager()) {
+            state->config_manager()->load_from_file(temp_main_config);
         }
 
         // 5. Create and initialize the photolysis process

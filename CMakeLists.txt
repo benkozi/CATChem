@@ -22,9 +22,6 @@ project(CATChem VERSION ${CATCHEM_VERSION} LANGUAGES Fortran C CXX)
 set(CATCHEM_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CATCHEM_SRC_DIR "${CATCHEM_ROOT_DIR}/src")
 
-# Option to build NUOPC cap (defaults to OFF)
-option(BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
-
 # Deprecated: ENABLE_KOKKOS was renamed to CATCHEM_ENABLE_KOKKOS to match the
 # other CATCHEM_* options. Honor the old name for out-of-tree callers.
 if(DEFINED ENABLE_KOKKOS AND NOT DEFINED CATCHEM_ENABLE_KOKKOS)
@@ -141,6 +138,8 @@ if(CATCHEM_ENABLE_KOKKOS)
       kokkos
       URL
         "https://github.com/kokkos/kokkos/releases/download/${CATCHEM_KOKKOS_VERSION}/kokkos-${CATCHEM_KOKKOS_VERSION}.tar.gz"
+      DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+      SYSTEM # treat the fetched headers as system headers (no warnings from them)
     )
     FetchContent_MakeAvailable(kokkos)
   endif()
@@ -157,10 +156,72 @@ else()
     INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/src/external/mdspan/include"
   )
 endif()
-# Option to build NUOPC cap (defaults to OFF)
+# Integration build options. CATCHEM_BUILD_NUOPC is authoritative; retain the
+# historical BUILD_NUOPC cache variable only as a migration path.
+set(_catchem_nuopc_option_was_defined FALSE)
+if(DEFINED CATCHEM_BUILD_NUOPC)
+  set(_catchem_nuopc_option_was_defined TRUE)
+endif()
 option(CATCHEM_BUILD_NUOPC "Build NUOPC cap and drivers" OFF)
+if(DEFINED BUILD_NUOPC)
+  if(
+    _catchem_nuopc_option_was_defined
+    AND NOT "${BUILD_NUOPC}" STREQUAL "${CATCHEM_BUILD_NUOPC}"
+  )
+    message(
+      FATAL_ERROR
+      "BUILD_NUOPC=${BUILD_NUOPC} conflicts with "
+      "CATCHEM_BUILD_NUOPC=${CATCHEM_BUILD_NUOPC}; remove BUILD_NUOPC and "
+      "use the CATCHEM_* option"
+    )
+  endif()
+  message(DEPRECATION "BUILD_NUOPC is deprecated; use CATCHEM_BUILD_NUOPC")
+  set(
+    CATCHEM_BUILD_NUOPC
+    "${BUILD_NUOPC}"
+    CACHE BOOL
+    "Build NUOPC cap and drivers"
+    FORCE
+  )
+endif()
+option(CATCHEM_BUILD_CCPP "Build the CCPP host interface" OFF)
+
+# Debug builds treat compiler warnings as errors so the tree cannot drift back
+# from zero warnings. OFF is the escape hatch for a toolchain that reports
+# something CATChem cannot fix. Release builds are unaffected (the warning
+# flag lists below are Debug-only).
+option(
+  CATCHEM_WARNINGS_AS_ERRORS
+  "Treat Debug-build compiler warnings as errors"
+  ON
+)
+option(
+  CATCHEM_CCPP_TEST_STUBS
+  "Build minimal CCPP framework stubs for contract testing"
+  OFF
+)
+set(
+  CATCHEM_CCPP_HOST_MODULE_DIR
+  ""
+  CACHE PATH
+  "Directory containing host CCPP Fortran modules"
+)
 option(CATCHEM_BUILD_TESTING "Build CATChem testing framework" ON)
+option(
+  CATCHEM_ENABLE_SANITIZERS
+  "Enable target-scoped address and undefined-behavior sanitizers"
+  OFF
+)
+option(
+  CATCHEM_ENABLE_BOUNDS_CHECK
+  "Enable target-scoped Fortran bounds checking"
+  OFF
+)
 option(CATCHEM_TRACE_NUOPC "Enable ESMF trace regions in NUOPC cap" OFF)
+
+if(CATCHEM_TRACE_NUOPC AND NOT CATCHEM_BUILD_NUOPC)
+  message(FATAL_ERROR "CATCHEM_TRACE_NUOPC=ON requires CATCHEM_BUILD_NUOPC=ON")
+endif()
 
 if(CATCHEM_TRACE_NUOPC)
   add_compile_definitions(CATCHEM_TRACE_NUOPC)
@@ -184,6 +245,47 @@ cmake_print_variables(
   CMAKE_BUILD_TYPE
 )
 set(_catchem_compiler_options "")
+
+add_library(catchem_validation_options INTERFACE)
+if(CATCHEM_ENABLE_SANITIZERS)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(
+      catchem_validation_options
+      INTERFACE
+        "$<$<COMPILE_LANGUAGE:C,CXX>:-fsanitize=address,undefined;-fno-omit-frame-pointer>"
+    )
+    target_link_options(
+      catchem_validation_options
+      INTERFACE -fsanitize=address,undefined
+    )
+  else()
+    message(
+      FATAL_ERROR
+      "CATCHEM_ENABLE_SANITIZERS is unsupported by ${CMAKE_CXX_COMPILER_ID}"
+    )
+  endif()
+endif()
+if(CATCHEM_ENABLE_BOUNDS_CHECK)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
+    target_compile_options(
+      catchem_validation_options
+      INTERFACE "$<$<COMPILE_LANGUAGE:Fortran>:-fcheck=bounds>"
+    )
+  elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
+    # SHELL: keeps "-check bounds" together. Without it CMake de-duplicates
+    # the repeated "-check" token against the Debug list's "-check all,nouninit"
+    # and ifx receives a bare "bounds" ("error #10236: File not found: 'bounds'").
+    target_compile_options(
+      catchem_validation_options
+      INTERFACE "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-check bounds>"
+    )
+  else()
+    message(
+      FATAL_ERROR
+      "CATCHEM_ENABLE_BOUNDS_CHECK is unsupported by ${CMAKE_Fortran_COMPILER_ID}"
+    )
+  endif()
+endif()
 
 # Handle Intel compiler deprecation warnings
 if(CMAKE_Fortran_COMPILER_ID MATCHES "^Intel")
@@ -213,7 +315,6 @@ if(
     -Wextra
     -pedantic
     -fcheck=all
-    -fno-sanitize=all
     -ffpe-trap=invalid,zero,overflow
     -fbacktrace
     -fmax-errors=0
@@ -238,22 +339,30 @@ elseif(
   )
 endif()
 
-# Disable memory sanitizer to avoid linking issues
+# C/C++ warning flags for CATChem-owned translation units (core, process
+# wrappers, tests). Debug only. Applied per directory so that vendored code
+# under src/external and fetched dependencies (Kokkos) are not affected.
+set(_catchem_cxx_warning_options "")
 if(
-  CMAKE_C_COMPILER_ID STREQUAL "GNU"
-  OR CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM"
+  CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang|IntelLLVM"
+  AND CMAKE_BUILD_TYPE MATCHES "Debug"
 )
-  # gcc and icx both accept standard sanitizer flags
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-sanitize=all")
-  # Note: Intel Classic C (icc) doesn't use -fsanitize, so we safely do nothing
+  # -pedantic: reject GNU extensions and features from a newer standard than
+  # the one selected (the host-only build is C++17 for UFS compatibility).
+  list(APPEND _catchem_cxx_warning_options -Wall -Wextra -pedantic)
+  if(CATCHEM_WARNINGS_AS_ERRORS)
+    list(APPEND _catchem_cxx_warning_options -Werror)
+  endif()
 endif()
-if(
-  CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
-  OR CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM"
-)
-  # g++ and icpx both accept standard sanitizer flags
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize=all")
-  # Note: Intel Classic C++ (icpc) doesn't use -fsanitize, so we safely do nothing
+
+if(CATCHEM_WARNINGS_AS_ERRORS AND CMAKE_BUILD_TYPE MATCHES "Debug")
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
+    list(APPEND _catchem_compiler_options -Werror)
+  elseif(CMAKE_Fortran_COMPILER_ID MATCHES "^Intel")
+    # SHELL: keeps "-warn errors" as one unit; the list already holds
+    # "-warn all" and CMake would otherwise de-duplicate the second "-warn".
+    list(APPEND _catchem_compiler_options "SHELL:-warn errors")
+  endif()
 endif()
 
 # Disable Intel oneAPI C/C++ warning about -g without -O0
@@ -284,22 +393,20 @@ if(CATCHEM_BUILD_NUOPC)
   message(STATUS "CATChem: using ESMF target '${CATCHEM_ESMF_TARGET}'")
 endif()
 
-# Auto-detect if default real is promoted to 8-byte by the parent build
-# or by per-target flags, and define USE_REAL8 so precision_mod sets fp=f8.
-if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU|G95")
-  if(CMAKE_Fortran_FLAGS MATCHES "-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(STATUS "CATChem: detected -fdefault-real-8, enabling USE_REAL8")
-  endif()
-elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel|IntelLLVM")
-  if(CMAKE_Fortran_FLAGS MATCHES "-r8|-real-size 64|-fdefault-real-8")
-    add_compile_definitions(USE_REAL8)
-    message(
-      STATUS
-      "CATChem: detected real-8 promotion flag, enabling USE_REAL8"
-    )
-  endif()
-endif()
+# Precision selection for the Fortran science bridges/schemes.
+#
+# DOUBLE precision is the default.  The bridge precision module
+# (catchem_bridge_precision) sets `fp = f8` unless USE_REAL4 is explicitly
+# defined, matching how GOCART/UFS build the science (-fdefault-real-8 / -r8)
+# and matching the real-8 promotion every process library + the
+# catchem_utilities target apply.  A compile-time guard in that module fails
+# the build if `fp` ever diverges from the actual default-real promotion, so
+# the precision cannot silently mismatch across the C++/Fortran boundary
+# regardless of how a parent build (e.g. UFS `add_subdirectory(CATChem)`)
+# configures flags.
+#
+# To build single precision, define USE_REAL4 AND drop the -fdefault-real-8 /
+# -r8 promotion from the scheme + utilities targets so the two stay consistent.
 
 # Find yaml-cpp for configuration parsing
 if(NOT TARGET yaml-cpp::yaml-cpp AND NOT TARGET yaml-cpp)
@@ -317,6 +424,10 @@ endif()
 
 add_subdirectory(src)
 
+if(CATCHEM_BUILD_CCPP)
+  add_subdirectory(drivers/ccpp)
+endif()
+
 # Enable testing for standalone builds
 if(CATCHEM_BUILD_TESTING)
   enable_testing()
@@ -326,6 +437,11 @@ endif()
 if(CATCHEM_BUILD_NUOPC)
   find_package(MPI COMPONENTS Fortran REQUIRED)
   add_subdirectory(drivers/nuopc)
+
+  # Fortran consumers must see generated .mod files while compiling, not only
+  # when linking cc_nuopc.  UFSDriver uses cc_nuopc directly, so keep the
+  # module directory on the target's public build interface.
+  set(CATCHEM_NUOPC_MODULE_DIR "${CMAKE_BINARY_DIR}/include")
 
   # Copy module files from include/ to mod/ for UFS integration during build
   # add_custom_target(copy_modules_to_mod ALL
@@ -345,10 +461,18 @@ if(CATCHEM_BUILD_NUOPC)
     drivers/nuopc/catchem_regrid_mod.F90
     drivers/nuopc/catchem_latlon_output_mod.F90
     drivers/nuopc/aqmio.F90
+    drivers/nuopc/catchem_emis_data_mod.F90
     drivers/nuopc/catchem_emis_mod.F90
     drivers/nuopc/catchem_nuopc_cap.F90
     drivers/nuopc/catchem_nuopc_interface.F90
   )
+
+  # UFS integration consumes this duplicate, self-contained NUOPC archive;
+  # propagate the trace option directly to it rather than relying on the
+  # directory-wide definition above.
+  if(CATCHEM_TRACE_NUOPC)
+    target_compile_definitions(cc_nuopc PRIVATE CATCHEM_TRACE_NUOPC)
+  endif()
 
   # Link only to external dependencies (not internal CATChem targets)
   target_link_libraries(
@@ -357,8 +481,15 @@ if(CATCHEM_BUILD_NUOPC)
   )
 
   # Manually handle the CATChem dependencies by linking to built libraries
-  # Only need to depend on CATChem - it already depends on CATChem_core, yaml_interface, etc.
+  # Only need to depend on CATChem - it already depends on CATChem_core, etc.
   add_dependencies(cc_nuopc CATChem)
+
+  # cc_nuopc compiles the same drivers/nuopc sources as NUOPC_CATChem_cap and
+  # both emit their .mod files into ${CATCHEM_NUOPC_MODULE_DIR}. Without an
+  # ordering between them, a parallel build lets two gfortran instances
+  # rename the same <module>.mod0 -> <module>.mod file and one of them fails
+  # with "Cannot rename module file". Serialise the two compilations.
+  add_dependencies(cc_nuopc NUOPC_CATChem_cap)
 
   # Link to library files in dependency order (most dependent first).
   # NOTE: $<TARGET_FILE:> carries no transitive usage requirements, so this
@@ -378,22 +509,17 @@ if(CATCHEM_BUILD_NUOPC)
       $<TARGET_FILE:CATChem_process_settling>
       $<TARGET_FILE:CATChem_process_so4chem>
       $<TARGET_FILE:CATChem_process_carbchem>
-      $<TARGET_FILE:CATChem_core>
       $<TARGET_FILE:CATChem_core_cpp>
-      $<TARGET_FILE:yaml_interface>
       $<TARGET_FILE:catchem_utilities>
   )
 
-  # yaml-cpp for the C++ core's config parsing, after CATChem_core_cpp in
-  # resolution order. Two provisioning modes (src/external/CMakeLists.txt):
-  # the vendored in-tree copy (plain `yaml-cpp` target, which also aliases
-  # yaml-cpp::yaml-cpp) or a system/spack install (imported
-  # yaml-cpp::yaml-cpp only). Link the library file in both modes to stay
-  # consistent with the export-safe path pattern above.
-  if(TARGET yaml-cpp)
-    target_link_libraries(cc_nuopc PRIVATE $<TARGET_FILE:yaml-cpp>)
-  else()
-    target_link_libraries(cc_nuopc PRIVATE $<TARGET_FILE:yaml-cpp::yaml-cpp>)
+  # yaml-cpp for the C++ core's config parsing. Prefer target-based linking
+  # here (not $<TARGET_FILE:...>) so both real and ALIAS/imported targets work
+  # across vendored and system/spack provisioning modes.
+  if(TARGET yaml-cpp::yaml-cpp)
+    target_link_libraries(cc_nuopc PRIVATE yaml-cpp::yaml-cpp)
+  elseif(TARGET yaml-cpp)
+    target_link_libraries(cc_nuopc PRIVATE yaml-cpp)
   endif()
 
   # Link GOCART2G library if available (needed for drydep process)
@@ -404,7 +530,7 @@ if(CATCHEM_BUILD_NUOPC)
   # Include directories for compilation
   target_include_directories(
     cc_nuopc
-    PRIVATE ${CMAKE_BINARY_DIR}/include
+    PUBLIC $<BUILD_INTERFACE:${CATCHEM_NUOPC_MODULE_DIR}>
     #$<TARGET_PROPERTY:CATChem,INTERFACE_INCLUDE_DIRECTORIES>
     #$<TARGET_PROPERTY:esmf,INTERFACE_INCLUDE_DIRECTORIES>
     #$<TARGET_PROPERTY:NetCDF::NetCDF_Fortran,INTERFACE_INCLUDE_DIRECTORIES>
@@ -413,8 +539,26 @@ if(CATCHEM_BUILD_NUOPC)
   set_target_properties(
     cc_nuopc
     PROPERTIES
-      Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../mod
+      # Keep generated module interfaces inside the build tree.  A path
+      # relative to the CMake working directory resolves outside a container
+      # build and makes downstream NUOPC applications unable to compile
+      # against cc_nuopc in a clean build.
+      Fortran_MODULE_DIRECTORY ${CATCHEM_NUOPC_MODULE_DIR}
       EXPORT_NAME cc_nuopc
+  )
+
+  # UFS configurations historically add <build>/mod to their Fortran module
+  # search path.  Keep that layout usable while the public target interface
+  # above remains the canonical dependency-safe path.
+  add_custom_command(
+    TARGET cc_nuopc
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/mod
+    COMMAND
+      ${CMAKE_COMMAND} -E copy_directory ${CATCHEM_NUOPC_MODULE_DIR}
+      ${CMAKE_BINARY_DIR}/mod
+    COMMENT
+      "Publishing CATChem NUOPC Fortran modules to mod/ for UFS compatibility"
   )
 
   target_compile_options(cc_nuopc PRIVATE ${_catchem_compiler_options})
@@ -430,6 +574,21 @@ if(CATCHEM_BUILD_NUOPC)
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
   )
+
+  # If CATChem builds an in-tree yaml-cpp target, export it with cc_nuopc so
+  # parent install(EXPORT ufs-config ...) does not fail on missing export-set
+  # dependencies. Imported/system yaml-cpp targets are excluded.
+  if(TARGET yaml-cpp)
+    get_target_property(_catchem_yamlcpp_is_imported yaml-cpp IMPORTED)
+    if(NOT _catchem_yamlcpp_is_imported)
+      install(
+        TARGETS yaml-cpp
+        EXPORT ufs-config
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+      )
+    endif()
+  endif()
 endif()
 
 # Install module files to both locations for compatibility

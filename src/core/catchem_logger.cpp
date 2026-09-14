@@ -1,9 +1,12 @@
 #include "catchem_logger.hpp"
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <unistd.h>
 
 namespace catchem {
@@ -17,22 +20,76 @@ namespace catchem {
     }
 
     void Logger::debug(const StateManager* state, std::string_view message, ContextList context) {
-        log(state, "DEBUG", message, context);
+        log(state, "DEBUG", Level::Debug, message, context);
     }
 
     void Logger::info(const StateManager* state, std::string_view message, ContextList context) {
-        log(state, "INFO ", message, context);
+        log(state, "INFO ", Level::Info, message, context);
     }
 
     void Logger::warn(const StateManager* state, std::string_view message, ContextList context) {
-        log(state, "WARN ", message, context);
+        log(state, "WARN ", Level::Warn, message, context);
     }
 
     void Logger::error(const StateManager* state, std::string_view message, ContextList context) {
-        log(state, "ERROR", message, context);
+        log(state, "ERROR", Level::Error, message, context);
     }
 
-    void Logger::log(const StateManager* state, std::string_view level, std::string_view message, ContextList context) {
+    std::optional<Logger::Level> Logger::level_from_string(std::string_view name) {
+        std::string value(name);
+        std::transform(value.begin(), value.end(), value.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        if (value == "debug")
+            return Level::Debug;
+        if (value == "info")
+            return Level::Info;
+        if (value == "warn" || value == "warning")
+            return Level::Warn;
+        if (value == "error")
+            return Level::Error;
+        return std::nullopt;
+    }
+
+    int& Logger::override_level() {
+        // Function-local static avoids static-initialisation-order problems and
+        // stays valid across shared-library teardown.  -1 means "no override".
+        static int override_value = -1;
+        return override_value;
+    }
+
+    void Logger::set_level(Level level) {
+        override_level() = static_cast<int>(level);
+    }
+
+    void Logger::clear_level() {
+        override_level() = -1;
+    }
+
+    Logger::Level Logger::threshold() {
+        // An explicit override (YAML configuration) always wins over the
+        // environment variable, which is resolved once and cached.
+        if (const int forced = override_level(); forced >= 0)
+            return static_cast<Level>(forced);
+        static const Level env_level = [] {
+            const char* raw = std::getenv("CATCHEM_LOG_LEVEL");
+            if (raw != nullptr && raw[0] != '\0') {
+                if (const auto parsed = level_from_string(raw))
+                    return *parsed;
+            }
+            return Level::Info;
+        }();
+        return env_level;
+    }
+
+    bool Logger::enabled(Level level) {
+        return level >= threshold();
+    }
+
+    void Logger::log(const StateManager* state, std::string_view level, Level level_id, std::string_view message,
+                     ContextList context) {
+        if (!enabled(level_id))
+            return;
+
         // 1. Get exact current UTC Timestamp
         auto now = std::chrono::system_clock::now();
         std::time_t now_time = std::chrono::system_clock::to_time_t(now);
@@ -63,7 +120,7 @@ namespace catchem {
         service.append(15 - service.length(), ' ');
 
         // 4. Assemble Trace ID (exactly 8 chars)
-        std::string trace = (state && !state->trace_id.empty()) ? state->trace_id : "global  ";
+        std::string trace = (state && !state->runtime_trace_id().empty()) ? state->runtime_trace_id() : "global  ";
         if (trace.length() < 8)
             trace.append(8 - trace.length(), ' ');
 

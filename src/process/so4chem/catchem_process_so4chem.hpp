@@ -11,6 +11,10 @@ namespace catchem {
         bool diagnostics_enabled;
         std::vector<int> diagnostic_species_id;
 
+        // GOCART scheme options staged from the runtime configuration
+        // (processes/so4chem/gocart/*) and forwarded to the science bridge.
+        bool gocart_update_so2 = true;
+
         // Persistent column states
         std::vector<char> firsttime;
         std::vector<int> nymd_last;
@@ -25,6 +29,8 @@ namespace catchem {
     public:
         SO4chemProcess();
         std::string get_name() const override { return "so4chem"; }
+        ProcessContract get_contract() const override;
+        void prepare_inputs(std::shared_ptr<StateManager> state) override;
         void init(std::shared_ptr<StateManager> state) override;
         void run(std::shared_ptr<StateManager> state) override;
         void finalize() override {}

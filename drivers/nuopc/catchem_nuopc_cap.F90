@@ -44,6 +44,7 @@ module cc_nuopc
       SetVM, &
       modelSS        => SetServices, &
       model_label_Advertise       => label_Advertise,      &
+      model_label_SetClock        => label_SetClock,       &
       model_label_DataInitialize  => label_DataInitialize, &
       model_label_Advance => label_Advance, &
       model_label_CheckImport => label_CheckImport, &
@@ -93,6 +94,10 @@ contains
 
       rc = ESMF_SUCCESS
 
+      call ESMF_LogWrite('CATChem: Enter SetServices', ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
       ! Set the model services
       call NUOPC_CompDerive(model, modelSS, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -113,6 +118,11 @@ contains
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 
+      call NUOPC_CompSpecialize(model, specLabel=model_label_SetClock, &
+         specRoutine=SetClock, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
       call NUOPC_CompSpecialize(model, specLabel=model_label_DataInitialize, &
          specRoutine=InitializeP2, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -127,6 +137,8 @@ contains
          specRoutine=ModelFinalize, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
+
+      call ESMF_LogWrite('CATChem: Completed SetServices', ESMF_LOGMSG_INFO, rc=rc)
 
    end subroutine SetServices
 
@@ -161,18 +173,41 @@ contains
       type(ESMF_State) :: importState, exportState
       !type(ESMF_Field), pointer :: fieldList(:)
       character(len=*), parameter :: routine = 'InitializeP1'
-      integer :: i
+      integer :: i, localPet, advertised_imports, advertised_exports
       character(len=218) :: errmsg
+      character(len=256) :: contract_msg
 
       rc = ESMF_SUCCESS
+      advertised_imports = 0
+      advertised_exports = 0
+
+      ! P1 runs while NUOPC constructs coupling lists.  Keep these markers
+      ! unconditional and low-volume: a driver-side stall otherwise produces
+      ! no CATChem evidence distinguishing an unentered cap from a stalled
+      ! state/configuration/advertisement call.
+      call ESMF_LogWrite('CATChem: Enter InitializeP1', ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
+      call ESMF_GridCompGet(model, localPet=localPet, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
 
       ! Get import and export states
       call NUOPC_ModelGet(model, importState=importState, exportState=exportState, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 
+      call ESMF_LogWrite('CATChem: InitializeP1 states acquired', ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
       ! Load field configuration
       call load_field_config(field_mapping_file, rc, errmsg)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
+      call ESMF_LogWrite('CATChem: InitializeP1 field mapping loaded', ESMF_LOGMSG_INFO, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 
@@ -189,52 +224,106 @@ contains
       !if (size(fieldList) == 0) then
       ! Advertise import fields using MPI-safe accessor functions
       do i = 1, size(field_config%import_fields)
-         !   block
-         !     character(len=128) :: standard_name
-         !     logical :: optional
-         !     if (get_import_field_info(i, standard_name, optional)) then
+         ! Optional fields normally remain unadvertised so a host that does
+         ! not produce them (for example humidity diagnostics) is valid.
+         ! Some hosts require a complete field contract even for data that is
+         ! optional to CATChem physics; YAML marks those entries advertise:
+         ! true.  This keeps host-specific contracts declarative rather than
+         ! hardcoding field names in the cap.
+         if (field_config%import_fields(i)%optional .and. &
+            .not. field_config%import_fields(i)%advertise) then
+            call ESMF_LogWrite('CATChem: optional import not advertised: ' // &
+               trim(field_config%import_fields(i)%standard_name), ESMF_LOGMSG_INFO, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, file=__FILE__)) return
+            cycle
+         end if
+         write(contract_msg, '(A,A)') 'CATChem: InitializeP1 advertising import ', &
+            trim(field_config%import_fields(i)%standard_name)
+         call ESMF_LogWrite(trim(contract_msg), ESMF_LOGMSG_INFO, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         if (.not. NUOPC_FieldDictionaryHasEntry(trim(field_config%import_fields(i)%standard_name), rc=rc)) then
+            block
+               character(len=64) :: units_to_use
+               units_to_use = trim(field_config%import_fields(i)%units)
+               if (len_trim(units_to_use) == 0) units_to_use = '1'
+               call NUOPC_FieldDictionaryAddEntry( &
+                  StandardName=trim(field_config%import_fields(i)%standard_name), &
+                  CanonicalUnits=trim(units_to_use), rc=rc)
+            end block
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, file=__FILE__)) return
+         end if
+
          call NUOPC_Advertise(importState, &
             StandardName=trim(field_config%import_fields(i)%standard_name), &
             TransferOfferGeomObject="cannot provide", &
             SharePolicyField="share", rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return
-         !     end if
-         !   end block
+         advertised_imports = advertised_imports + 1
       end do
-      !end if
 
-      ! retrieve member list from export state, if any
-      !nullify(fieldList)
-      !call NUOPC_GetStateMemberLists(exportState, fieldList=fieldList, nestedFlag=.true., rc=rc)
-      !if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-      !  line=__LINE__,  file=__FILE__)) return
-
-      !call ESMF_LogWrite("Export fields number: "//real_to_string(real(size(fieldList),ESMF_KIND_R8)), ESMF_LOGMSG_INFO, rc=rc)
-
-      ! Advertise export fields only when it has nothing
-      !if (size(fieldList) == 0) then
       ! Advertise export fields using MPI-safe accessor functions
       do i = 1, size(field_config%export_fields)
-         !   block
-         !     character(len=128) :: standard_name
-         !     logical :: optional
-         !     if (get_export_field_info(i, standard_name, optional)) then
+         write(contract_msg, '(A,A)') 'CATChem: InitializeP1 advertising export ', &
+            trim(field_config%export_fields(i)%standard_name)
+         call ESMF_LogWrite(trim(contract_msg), ESMF_LOGMSG_INFO, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         if (.not. NUOPC_FieldDictionaryHasEntry(trim(field_config%export_fields(i)%standard_name), rc=rc)) then
+            block
+               character(len=64) :: units_to_use
+               units_to_use = trim(field_config%export_fields(i)%units)
+               if (len_trim(units_to_use) == 0) units_to_use = '1'
+               call NUOPC_FieldDictionaryAddEntry( &
+                  StandardName=trim(field_config%export_fields(i)%standard_name), &
+                  CanonicalUnits=trim(units_to_use), rc=rc)
+            end block
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+               line=__LINE__, file=__FILE__)) return
+         end if
+
          call NUOPC_Advertise(exportState, &
             StandardName=trim(field_config%export_fields(i)%standard_name), &
             TransferOfferGeomObject="cannot provide", &
             SharePolicyField="share", rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return
-         !     end if
-         !   end block
+         advertised_exports = advertised_exports + 1
       end do
-      !end if
 
       ! Log successful completion
+      write(contract_msg, '(A,I0,A,I0,A,I0)') 'CATChem: advertisement complete on PET ', localPet, &
+         '; imports=', advertised_imports, '; exports=', advertised_exports
+      call ESMF_LogWrite(trim(contract_msg), ESMF_LOGMSG_INFO, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
       call ESMF_LogWrite("CATChem: Completed "//routine, ESMF_LOGMSG_INFO, rc=rc)
 
    end subroutine InitializeP1
+
+   !> \brief SetClock specialization - Remove unconnected fields before connection verification
+   !!
+   !! \param[inout] model NUOPC model component
+   !! \param[out] rc ESMF return code
+   subroutine SetClock(model, rc)
+      type(ESMF_GridComp)  :: model
+      integer, intent(out) :: rc
+
+      type(ESMF_State) :: importState, exportState
+
+      rc = ESMF_SUCCESS
+
+      call ESMF_LogWrite("CATChem: Enter SetClock", ESMF_LOGMSG_INFO, rc=rc)
+
+      call NUOPC_ModelGet(model, importState=importState, exportState=exportState, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
+      call ESMF_LogWrite("CATChem: Completed SetClock", ESMF_LOGMSG_INFO, rc=rc)
+   end subroutine SetClock
 
    !> \brief Initialize Phase 2 - Realize fields and initialize CATChem model
    !!
@@ -283,7 +372,7 @@ contains
       real(ESMF_KIND_R8), parameter :: rad_to_deg = 180._ESMF_KIND_R8 / 3.14159265358979323846_ESMF_KIND_R8
       real(ESMF_KIND_R8) :: convet_unit
       integer :: localPet, petCount
-      integer :: item, coord_item, rank, localDeCount, numLevels, localDe, localrc, stat
+      integer :: item, coord_item, rank, localDeCount, numLevels, localDe, localrc
       integer, dimension(2) :: lb, ub
       logical :: has_tracer_array
 
@@ -296,6 +385,11 @@ contains
       call ESMF_GridCompGet(model, localPet=localPet, petCount=petCount, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
+
+#ifdef CATCHEM_TRACE_NUOPC
+      write(*, '(A,I0,A,I0)') '[CAP DEBUG] InitializeP2 localPet=', localPet, ' petCount=', petCount
+      call flush(6)
+#endif
 
       ! Get import and export states
       call NUOPC_ModelGet(model, importState=importState, exportState=exportState, modelClock=clock, rc=rc)
@@ -363,14 +457,21 @@ contains
                         return  ! bail out
                      end if
 
-                     select case (coord_item)
-                      case(1)
-                        lon = coord * convet_unit
-                      case(2)
-                        lat = coord * convet_unit
-                      case default
-                        !do nothing
-                     end select
+                     if (associated(coord)) then
+                        select case (coord_item)
+                         case(1)
+                           lon = coord * convet_unit
+                         case(2)
+                           lat = coord * convet_unit
+                         case default
+                           !do nothing
+                        end select
+                     else
+                        call ESMF_LogSetError(ESMF_RC_INTNRL_BAD, &
+                           msg="Grid coordinate arrays are not fully allocated/associated before CATChem init", &
+                           line=__LINE__, file=__FILE__, rcToReturn=rc)
+                        return  ! bail out
+                     end if
                   end do ! loop over coordinate dimensions
                end do ! loop over local DEs
 
@@ -381,9 +482,9 @@ contains
                line=__LINE__, file=__FILE__, rcToReturn=rc)
          end if
 
-         deallocate(fieldList, stat=stat)
-         if (ESMF_LogFoundDeallocError(statusToCheck=stat, msg="Unable to deallocate internal memory", &
-            line=__LINE__, file=__FILE__, rcToReturn=rc)) return  ! bail out
+         ! Release the temporary member-list returned by NUOPC, matching the
+         ! convention used by the UFS ATM cap after iterating its list.
+         deallocate(fieldList)
          nullify(fieldList)
 
       end if
@@ -439,7 +540,7 @@ contains
 
       type(ESMF_State) :: importState, exportState
       type(ESMF_Clock) :: clock
-      type(ESMF_Time) :: currTime
+      type(ESMF_Time) :: currTime, nextTime
       type(ESMF_TimeInterval) :: timeStep
       type(CATChem_InternalState) :: is
       character(len=*), parameter :: routine = 'ModelAdvance'
@@ -469,6 +570,8 @@ contains
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 
+      nextTime = currTime + timeStep
+
       if (localPet == 0) then
          call ESMF_LogWrite("CATChem: Running CATChem for dt = " // &
             trim(adjustl(real_to_string(dt_seconds))) // " seconds", &
@@ -476,6 +579,7 @@ contains
       end if
 
       ! -- get component's internal state
+      nullify(is%wrap)
       call ESMF_GridCompGetInternalState(model, is, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__,  file=__FILE__))  return  ! bail out
@@ -520,7 +624,15 @@ contains
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 #endif
-      call transform_catchem_to_nuopc(is%wrap, exportState, rc)
+      call transform_catchem_to_nuopc(is%wrap, exportState, rc, nextTime)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
+      ! The producer owns the validity time of its completed exports.  Stamp
+      ! the whole state after every transform so downstream NUOPC components
+      ! see the end-of-interval timestamp of the CATChem advance that
+      ! produced these fields.
+      call NUOPC_SetTimestamp(exportState, nextTime, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 #ifdef CATCHEM_TRACE_NUOPC
@@ -576,6 +688,7 @@ contains
          line=__LINE__, file=__FILE__)) return
 
       ! -- get component's internal state
+      nullify(is%wrap)
       call ESMF_GridCompGetInternalState(model, is, rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__,  file=__FILE__))  return  ! bail out

@@ -1,71 +1,55 @@
-set(
-  _base_srcs
-  constants.F90
-  error_mod.F90
-  UnitConversion_Mod.F90
-  met_utilities_mod.F90
-)
-
-set(
-  _state_srcs
-  TimeState_Mod.F90
-  species_mod.F90
-  GridGeometry_Mod.F90
-  metstate_mod.F90
-  chemstate_mod.F90
-  ExtEmisData_Mod.F90
-  DiagnosticInterface_Mod.F90
-  ConfigManager_Mod.F90
-  StateManager_Mod.F90
-  DiagnosticManager_Mod.F90
-  ChemSpeciesUtils_Mod.F90
-  Interop_Mod.F90
-)
-
-set(_srcs ${_base_srcs} ${_state_srcs})
-
-add_library(CATChem_core ${_srcs})
-set_target_properties(
-  CATChem_core
-  PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include
-)
-# Force serial build for this target to avoid Fortran module race conditions
-set_property(TARGET CATChem_core PROPERTY JOB_POOLS compile=serial)
-set_property(TARGET CATChem_core PROPERTY JOB_POOL_COMPILE serial)
-
-foreach(opt IN LISTS _catchem_compiler_options)
-  target_compile_options(
-    CATChem_core
-    PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:${opt}>"
-  )
+foreach(opt IN LISTS _catchem_cxx_warning_options)
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:${opt}>")
 endforeach()
 
-target_link_libraries(CATChem_core PRIVATE yaml_interface catchem_utilities)
-
-# Link GOCART2G library for external process dependencies
-if(TARGET GOCART2G)
-  target_link_libraries(CATChem_core PUBLIC GOCART2G)
-endif()
-
-# C++ core: built in both flavors. With Kokkos it gains device mirrors and
-# parallel dispatch; without it the same sources compile host-only against
-# the standalone mdspan library.
 set(
   _cpp_core_srcs
   catchem_core.cpp
   catchem_api.cpp
+  catchem_api_lifecycle.cpp
+  catchem_api_state.cpp
+  catchem_api_diagnostics.cpp
+  catchem_api_config.cpp
+  catchem_api_utilities.cpp
   catchem_diagnostic.cpp
   catchem_config_manager.cpp
   catchem_grid_manager.cpp
   catchem_state_manager.cpp
+  catchem_emission_manager.cpp
   catchem_logger.cpp
+  catchem_runtime_lease.cpp
+  catchem_handle_registry.hpp
+  catchem_boundary_guard.hpp
+  catchem_physical_validation.cpp
+  catchem_physical_validation.hpp
+  catchem_runtime_lease.hpp
 )
+
+# Focused architecture sources are added as they are introduced. Keeping this
+# list explicit makes subsystem ownership visible without breaking incremental
+# feature work when a source has not landed yet.
+set(
+  _catchem_architecture_sources
+  catchem_validation.hpp
+  catchem_execution_plan.cpp
+  catchem_execution_plan.hpp
+  catchem_field_contract.hpp
+  catchem_handle_registry.hpp
+)
+foreach(_source IN LISTS _catchem_architecture_sources)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_source}")
+    list(APPEND _cpp_core_srcs "${_source}")
+  endif()
+endforeach()
 add_library(CATChem_core_cpp STATIC ${_cpp_core_srcs})
 # Use the namespaced target: the plain `yaml-cpp` name is only a
 # directory-scoped alias in src/external when yaml-cpp comes from the
 # system/spack, so it is not visible here; yaml-cpp::yaml-cpp exists
 # everywhere in both provisioning modes.
-target_link_libraries(CATChem_core_cpp PUBLIC yaml-cpp::yaml-cpp)
+target_link_libraries(
+  CATChem_core_cpp
+  PUBLIC yaml-cpp::yaml-cpp catchem_validation_options
+)
 target_include_directories(CATChem_core_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(CATCHEM_ENABLE_KOKKOS)
@@ -75,12 +59,14 @@ else()
   target_link_libraries(CATChem_core_cpp PUBLIC mdspan::mdspan)
 endif()
 
-target_link_libraries(CATChem_core PUBLIC CATChem_core_cpp)
+# Instead of removing CATChem_core, we make it an INTERFACE library that depends on CATChem_core_cpp
+# and external libraries, so downstream targets still build without modification.
+add_library(CATChem_core INTERFACE)
+target_link_libraries(CATChem_core INTERFACE CATChem_core_cpp catchem_utilities)
 
-if(TARGET musica)
-  target_link_libraries(CATChem_core PUBLIC musica::musica-fortran)
+if(TARGET GOCART2G)
+  target_link_libraries(CATChem_core INTERFACE GOCART2G)
 endif()
-
-set_source_files_properties(metstate_mod.F90 PROPERTIES COMPILE_FLAGS "-cpp")
-
-target_include_directories(CATChem_core PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+if(TARGET musica)
+  target_link_libraries(CATChem_core INTERFACE musica::musica-fortran)
+endif()

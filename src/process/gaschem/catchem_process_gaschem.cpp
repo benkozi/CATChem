@@ -7,9 +7,14 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
-#include <yaml-cpp/yaml.h>
 
 namespace catchem {
+
+    ProcessContract GasChemProcess::get_contract() const {
+        return make_contract(get_name(),
+                             {host_field_3d("T", "K"), host_field_3d("PMID", "Pa"),
+                              host_field_3d("AIRDEN_DRY", "kg/m3", FieldRequirement::Optional), host_concentration()});
+    }
 
     GasChemProcess::GasChemProcess() = default;
     GasChemProcess::~GasChemProcess() = default;
@@ -17,39 +22,20 @@ namespace catchem {
     void GasChemProcess::init(std::shared_ptr<StateManager> state) {
         Logger::debug(state.get(), "GasChemProcess::init started");
 
-        // 1. Resolve configuration directory path dynamically
-        if (state->config_mgr) {
-            try {
-                YAML::Node gas_node = state->config_mgr->get_process_config(ProcessNames::GasChem);
-                if (gas_node.IsDefined() && gas_node["config_dir"]) {
-                    this->config_dir = gas_node["config_dir"].as<std::string>();
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "GasChemProcess: Error: failed to parse config from ConfigManager: " << e.what()
-                          << std::endl;
-                throw std::runtime_error(std::string("GasChemProcess: failed to parse config from ConfigManager: ") +
-                                         e.what());
+        // 1. Resolve configuration directory path dynamically via ConfigManager
+        if (state->config_manager()) {
+            std::string dir = state->config_manager()->get_string("processes/gaschem/config_dir", "");
+            if (dir.empty()) {
+                dir = state->config_manager()->get_string("process/gaschem/config_dir", "");
             }
-        } else if (!state->config_file_path.empty()) {
-            try {
-                YAML::Node main_config = YAML::LoadFile(state->config_file_path);
-                std::string gaschem_key(ProcessNames::GasChem);
-                if (main_config["process"] && main_config["process"][gaschem_key]) {
-                    auto gas_node = main_config["process"][gaschem_key];
-                    if (gas_node["config_dir"]) {
-                        this->config_dir = gas_node["config_dir"].as<std::string>();
-                    }
-                }
-            } catch (const std::exception& e) {
-                std::cerr << "GasChemProcess: Error: failed to parse main config for gaschem: " << e.what()
-                          << std::endl;
-                throw std::runtime_error(std::string("GasChemProcess: failed to parse main config: ") + e.what());
+            if (!dir.empty()) {
+                this->config_dir = dir;
             }
         }
 
         if (this->config_dir.empty()) {
-            if (!state->config_file_path.empty()) {
-                std::string path = state->config_file_path;
+            if (!state->configuration_path().empty()) {
+                std::string path = state->configuration_path();
                 size_t last_slash = path.find_last_of("/\\");
                 if (last_slash != std::string::npos) {
                     this->config_dir = path.substr(0, last_slash + 1);
@@ -66,14 +52,14 @@ namespace catchem {
         // 2. Initialize MICM and State using musica library
         try {
             micm_instance = std::make_unique<musica::MICM>(config_dir, musica::RosenbrockStandardOrder);
-            micm_state = std::make_unique<musica::State>(*micm_instance, state->n_cols * state->n_levels);
+            micm_state = std::make_unique<musica::State>(*micm_instance, state->column_count() * state->level_count());
             initialized = true;
             std::clog << "[INFO] GasChemProcess: initialized MICM successfully!" << std::endl;
 
             // Validate that all active CATChem species are mapped inside the MICM solver
             auto variable_map = micm_state->GetVariableMap();
-            for (int ispec = 0; ispec < state->n_species; ++ispec) {
-                std::string name = state->chem.species_list[ispec].short_name;
+            for (int ispec = 0; ispec < state->species_count(); ++ispec) {
+                std::string name = state->chemistry().species_list[ispec].short_name;
                 for (auto& c : name)
                     c = std::toupper(c);
                 if (variable_map.find(name) == variable_map.end()) {
@@ -95,20 +81,30 @@ namespace catchem {
         }
 
         // 1. Sync device to host
-        state->sync_to_host();
 
-        auto temp = state->met.T->host_view;
-        auto pmid = state->met.PMID->host_view;
-        auto airden_dry = state->met.AIRDEN_DRY->host_view;
-        auto conc = state->chem.conc->host_view;
+        if (!state->meteorology().AIRDEN_DRY && state->meteorology().PMID && state->meteorology().T) {
+            state->derive_airden_dry();
+        }
+
+        if (!state->meteorology().T || !state->meteorology().PMID || !state->meteorology().AIRDEN_DRY ||
+            !state->chemistry().conc) {
+            throw std::runtime_error(
+                "GasChem requires current T, PMID, AIRDEN_DRY, and chemistry concentration fields");
+        }
+
+        auto temp = state->meteorology().T->host_view;
+        auto pmid = state->meteorology().PMID->host_view;
+        auto airden_dry = state->meteorology().AIRDEN_DRY->host_view;
+        state->chemistry().conc->host_write();
+        auto conc = state->chemistry().conc->host_view;
 
         auto& micm_conditions = micm_state->GetConditions();
         auto& micm_concs = micm_state->GetOrderedConcentrations();
         auto& micm_rate_params = micm_state->GetOrderedRateParameters();
 
-        int nc = state->n_cols;
-        int nl = state->n_levels;
-        int ns = state->n_species;
+        int nc = state->column_count();
+        int nl = state->level_count();
+        int ns = state->species_count();
 
         size_t vector_size_ = micm_instance->GetVectorSize();
         auto variable_map = micm_state->GetVariableMap();
@@ -129,13 +125,9 @@ namespace catchem {
                 double p_val = pmid(icol, ilev, 0);
                 double density_dry_kg = airden_dry(icol, ilev, 0);
 
-                // Standard boundary assertions
-                if (t_val <= 0.0)
-                    t_val = 298.15;
-                if (p_val <= 0.0)
-                    p_val = 101325.0;
-                if (density_dry_kg <= 0.0)
-                    density_dry_kg = 1.2;
+                if (!std::isfinite(t_val) || t_val <= 0.0 || !std::isfinite(p_val) || p_val <= 0.0 ||
+                    !std::isfinite(density_dry_kg) || density_dry_kg <= 0.0)
+                    throw std::domain_error("GasChem received non-physical T, PMID, or AIRDEN_DRY");
 
                 // Convert dry air density: kg/m3 to mol/m3
                 double air_density_mol = density_dry_kg / air_mw_kg;
@@ -146,7 +138,7 @@ namespace catchem {
 
                 // Copy concentrations: ppmv -> mol/m3
                 for (int ispec = 0; ispec < ns; ++ispec) {
-                    std::string name = state->chem.species_list[ispec].short_name;
+                    std::string name = state->chemistry().species_list[ispec].short_name;
                     for (auto& c : name)
                         c = std::toupper(c);
 
@@ -154,8 +146,9 @@ namespace catchem {
                     if (it != variable_map.end()) {
                         size_t i_micm_spec = it->second;
                         double ppmv_val = conc(icol, ilev, ispec);
-                        if (ppmv_val < 0.0)
-                            ppmv_val = 1.0e-20; // Safe bounding to prevent NaN
+                        if (!std::isfinite(ppmv_val) || ppmv_val < 0.0)
+                            throw std::domain_error("GasChem received a negative or non-finite concentration for " +
+                                                    name);
 
                         double conc_molar = ppmv_val * 1.0e-6 * air_density_mol;
 
@@ -177,8 +170,9 @@ namespace catchem {
                         std::string diag_name = "photolysis_rate_" + label;
 
                         double rate_val = 0.0;
-                        if (state->diag_mgr && state->diag_mgr->has_field(diag_name)) {
-                            double* diag_ptr = static_cast<double*>(state->diag_mgr->get_host_pointer(diag_name));
+                        if (state->diagnostic_manager() && state->diagnostic_manager()->has_field(diag_name)) {
+                            double* diag_ptr =
+                                static_cast<double*>(state->diagnostic_manager()->get_host_pointer(diag_name));
                             if (diag_ptr) {
                                 int diag_idx = ilev * nc + icol;
                                 rate_val = diag_ptr[diag_idx];
@@ -193,7 +187,7 @@ namespace catchem {
         }
 
         // 4. Run standard CPU solver
-        double tstep = state->time.timestep;
+        double tstep = state->clock().timestep;
         if (tstep <= 0.0) {
             Logger::error(state.get(), "Invalid timestep encountered", {{"timestep", std::to_string(tstep)}});
             throw std::runtime_error("GasChemProcess: timestep must be greater than zero.");
@@ -214,7 +208,7 @@ namespace catchem {
                 double air_density_mol = micm_conditions[i_cell].air_density_;
 
                 for (int ispec = 0; ispec < ns; ++ispec) {
-                    std::string name = state->chem.species_list[ispec].short_name;
+                    std::string name = state->chemistry().species_list[ispec].short_name;
                     for (auto& c : name)
                         c = std::toupper(c);
 
@@ -228,8 +222,9 @@ namespace catchem {
                         double conc_molar = micm_concs[idx];
 
                         double ppmv_val = (conc_molar / air_density_mol) * 1.0e6;
-                        if (ppmv_val < 0.0)
-                            ppmv_val = 1.0e-20;
+                        if (!std::isfinite(ppmv_val) || ppmv_val < 0.0)
+                            throw std::domain_error(
+                                "GasChem solver returned a negative or non-finite concentration for " + name);
                         conc(icol, ilev, ispec) = ppmv_val;
                     }
                 }
@@ -237,14 +232,17 @@ namespace catchem {
         }
 
         // 6. Sync back to device
-        state->sync_to_device();
+        if (state->chemistry().conc)
+            state->chemistry().conc->mark_host_modified();
     }
 
     void GasChemProcess::finalize() {}
 
 } // namespace catchem
 
+extern "C" {
 void catchem_register_gaschem_cpp() {
     catchem::ProcessRegistry::get_instance().register_process(
         std::string(catchem::ProcessNames::GasChem), []() { return std::make_shared<catchem::GasChemProcess>(); });
+}
 }

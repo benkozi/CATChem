@@ -9,6 +9,7 @@ set(
   catchem_latlon_output_mod.F90
   catchem_nuopc_cap.F90
   catchem_nuopc_interface.F90
+  catchem_emis_data_mod.F90
   catchem_emis_mod.F90
   # catchem_nuopc_netcdf_out.F90
   # catchem_nuopc_cf_input.F90
@@ -22,6 +23,14 @@ set(_lib NUOPC_CATChem_cap)
 # find_package(NetCDF REQUIRED)      # Removed to avoid conflicts
 
 add_library(${_lib} ${_srcs})
+
+# Keep this target self-describing.  UFS commonly consumes the separate
+# self-contained cc_nuopc archive, so relying only on a directory-level
+# definition can leave the cap sources compiled without the requested trace.
+if(CATCHEM_TRACE_NUOPC)
+  target_compile_definitions(${_lib} PRIVATE CATCHEM_TRACE_NUOPC)
+endif()
+
 target_link_libraries(
   ${_lib}
   PUBLIC CATChem ${CATCHEM_ESMF_TARGET} NetCDF::NetCDF_Fortran MPI::MPI_Fortran

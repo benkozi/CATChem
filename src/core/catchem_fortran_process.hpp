@@ -22,7 +22,7 @@ namespace catchem {
 
         std::string get_name() const override { return name; }
 
-        void init(std::shared_ptr<StateManager> state) override {
+        void init([[maybe_unused]] std::shared_ptr<StateManager> state) override {
             // Initial setup if required
         }
 
@@ -33,6 +33,8 @@ namespace catchem {
             // 2. Invoke the Fortran bridging callback
             if (bridge_callback) {
                 bridge_callback(static_cast<void*>(state.get()));
+                if (state->chemistry().conc)
+                    state->chemistry().conc->mark_host_modified();
             }
 
             // 3. Sync modified host buffers back to device Views

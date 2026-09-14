@@ -1,7 +1,7 @@
 module SO4chemScienceBridge_Mod
    use iso_c_binding, only: c_ptr, c_f_pointer, c_double, c_char, c_associated, c_bool, c_int
-   use Precision_Mod, only: fp
-   use Constants, only: g0, Cpd, AVO, VON_KARMAN, AIRMW, PI
+   use catchem_bridge_precision, only: fp
+   use catchem_bridge_constants, only: g0, Cpd, AVO, VON_KARMAN, AIRMW, PI
    use SO4chemCommon_Mod, only: SO4chemSchemeGOCARTConfig
    use SO4chemScheme_GOCART_Mod, only: compute_gocart
    implicit none
@@ -10,6 +10,7 @@ contains
    subroutine run_so4chem_science_bridge( &
       n_cols, n_levels, n_species, dt, &
       diagnostics, &
+      gocart_update_so2, &
    ! Date & Time
       year, month, day, hour, minute, second, &
    ! 3D Met Pointers
@@ -29,6 +30,11 @@ contains
       integer(c_int), value :: n_cols, n_levels, n_species
       real(c_double), value :: dt
       integer(c_int), value :: diagnostics
+
+      ! Scheme tuning options staged by SO4chemProcess::init from the runtime
+      ! YAML.  The C++ layer owns parsing and validation; the bridge only
+      ! applies them onto the GOCART configuration type.
+      integer(c_int), value :: gocart_update_so2
 
       integer(c_int), value :: year, month, day, hour, minute, second
 
@@ -60,7 +66,7 @@ contains
       ! Loop variables
       integer :: icol, i, j, ispec
       character(len=32) :: dummy_sp_names(n_species)
-      logical :: f_firsttime, is_aero
+      logical :: f_firsttime
 
       ! Local arrays in native solver precision (fp) to avoid double-float mismatches
       real(fp) :: f_airden(n_levels)
@@ -78,8 +84,7 @@ contains
       ! Sliced concentration and tendencies in solver precision
       real(fp) :: f_conc(n_levels, n_species)
       real(fp) :: col_tendencies(n_levels, n_species)
-      real(fp) :: col_conc_new(n_levels)
-
+      real(fp) :: col_updated(n_levels, n_species)
       ! Local arrays to resolve Fortran BIND(C) allocatable constraints & rank matches
       real(fp), allocatable :: local_xh2o2_init(:)
       real(fp) :: col_prod_rate(n_levels, n_species)
@@ -88,6 +93,15 @@ contains
       real(fp) :: col_dms_flux
 
       type(SO4chemSchemeGOCARTConfig) :: gocart_config
+
+      ! `diagnostics` is part of the shared science-bridge calling convention;
+      ! so4chem does not emit per-process diagnostics yet, so reference it here
+      ! to keep the bridge signature uniform without an unused-argument warning.
+      associate(unused_diagnostics => diagnostics); end associate
+
+      ! Apply the YAML tuning options staged by the C++ process layer so the
+      ! scheme no longer runs on compiled defaults alone.
+      gocart_config%update_so2 = (gocart_update_so2 /= 0)
 
       ! Associate pointers
       call c_f_pointer(c_airden,   airden,   [n_cols, n_levels])
@@ -151,7 +165,13 @@ contains
          f_v10m         = real(v10m(icol), fp)
          f_z0h          = real(z0h(icol), fp)
 
-         f_conc         = real(conc(icol, :, :), fp)
+         ! Convert input concentrations from kg/kg to expected process units (ug/kg for aerosols, ppmv for gases)
+         do ispec = 1, n_species
+            ! conc is already in ug/kg for aerosols and ppm for gases.
+            ! We just copy it into f_conc.
+            f_conc(:, ispec) = real(conc(icol, :, ispec), fp)
+         end do
+
          col_tendencies = 0.0_fp
          col_prod_rate  = 0.0_fp
          col_pso4_g     = 0.0_fp
@@ -180,27 +200,22 @@ contains
             col_prod_rate, col_pso4_g, col_pso4_aq, col_dms_flux, &
             diagnostic_species_id=diagnostic_species_id)
 
-         ! Convert updated GOCART concentrations (ppm or ug/kg) to actual tendencies in kg/kg/s
+         ! The legacy ProcessSO4chemInterface wrote the scheme's updated
+         ! concentrations directly back to the virtual column.  Retain that
+         ! replacement semantics here; CATChem's temporary tendency is only
+         ! retained for the process API.
+         col_updated = col_tendencies
          do ispec = 1, n_species
-            is_aero = .false.
-            if ( dummy_sp_names(ispec) == 'SO4' .or. dummy_sp_names(ispec) == 'so4' .or. &
-               dummy_sp_names(ispec) == 'MSA' .or. dummy_sp_names(ispec) == 'msa' .or. &
-               dummy_sp_names(ispec) == 'ASO4J' .or. dummy_sp_names(ispec) == 'aso4j' ) then
-               is_aero = .true.
-            end if
-
-            if ( is_aero ) then
-               col_conc_new(:) = col_tendencies(:, ispec) * 1.0e-9_fp
-            else
-               col_conc_new(:) = col_tendencies(:, ispec) * 1.0e-6_fp * (f_mw_g(ispec) / AIRMW)
-            end if
-
-            col_tendencies(:, ispec) = (col_conc_new(:) - real(conc(icol, :, ispec), fp)) / dt
+            ! col_tendencies contains the complete NEW state in the same
+            ! native unit as conc (ppm for gases, ug/kg for aerosols).
+            ! Do not use a nonzero sentinel: zero is a valid depleted state.
+            col_tendencies(:, ispec) = (col_updated(:, ispec) - real(conc(icol, :, ispec), fp)) / dt
          end do
 
-         ! Write tendencies and updated concentrations back in-place (casting to c_double)
+         ! Preserve the legacy direct replacement while retaining the C++
+         ! tendency API for consumers that need rates.
          tendency(icol, :, :) = real(col_tendencies, c_double)
-         conc(icol, :, :) = conc(icol, :, :) + real(dt * col_tendencies, c_double)
+         conc(icol, :, :) = real(col_updated, c_double)
 
          ! Copy persistent changes and diagnostics back to C++ buffers (casting to c_double)
          firsttime(icol)     = f_firsttime

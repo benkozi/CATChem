@@ -7,15 +7,12 @@
 set(
   SETTLING_PROCESS_SOURCES
   SettlingCommon_Mod.F90
+  SettlingScienceBridge.F90
   catchem_process_settling.cpp
 )
 
 # Define settling scheme sources
-set(
-  SETTLING_SCHEME_SOURCES
-  schemes/SettlingScheme_GOCART_Mod.F90
-  schemes/SettlingPhysics_Mod.F90
-)
+set(SETTLING_SCHEME_SOURCES schemes/SettlingScheme_GOCART_Mod.F90)
 
 # Combine all sources
 set(SETTLING_ALL_SOURCES ${SETTLING_PROCESS_SOURCES} ${SETTLING_SCHEME_SOURCES})

@@ -1,7 +1,7 @@
 module CarbChemScienceBridge_Mod
    use iso_c_binding
-   use precision_mod, only: fp
-   use Constants, only: g0
+   use catchem_bridge_precision, only: fp
+   use catchem_bridge_constants, only: g0
    use CarbChemScheme_GOCART_Mod, only: compute_gocart
    use CarbChemCommon_Mod, only: CarbChemSchemeGOCARTConfig
 
@@ -13,6 +13,7 @@ contains
    subroutine run_carbchem_science_bridge( &
       n_cols, n_levels, n_species, dt, &
       active_scheme, diagnostics, &
+      gocart_time_days_hydrophobic_to_hydrophilic, &
       year, month, day, hour, minute, second, &
       airden, delp, pmid, &
       species_t_chem_loss, species_names_char, &
@@ -26,6 +27,12 @@ contains
       real(c_double), value :: dt
       character(kind=c_char), intent(in) :: active_scheme(*)
       integer(c_int), value :: diagnostics
+
+      ! Scheme tuning options staged by CarbChemProcess::init from the runtime
+      ! YAML.  The C++ layer owns parsing and validation; the bridge only
+      ! applies them onto the GOCART configuration type.
+      real(c_double), value :: gocart_time_days_hydrophobic_to_hydrophilic
+
       integer(c_int), value :: year, month, day, hour, minute, second
 
       ! C++ Raw Pointers
@@ -43,8 +50,8 @@ contains
       type(c_ptr), value :: diag_phobic_mass
       type(c_ptr), value :: diag_phobic_flux
 
-      integer(c_int), intent(in) :: diagnostic_species_id(n_diag_species)
       integer(c_int), value :: n_diag_species
+      integer(c_int), intent(in) :: diagnostic_species_id(n_diag_species)
 
       ! Local Fortran Pointers for multidimensional mapping
       real(c_double), pointer :: f_airden(:,:), f_delp(:,:), f_pmid(:,:)
@@ -73,7 +80,7 @@ contains
       ! Control structures
       type(CarbChemSchemeGOCARTConfig) :: gocart_config
       character(len=32) :: local_scheme
-      integer :: icol, i, j, k
+      integer :: icol, i, j
 
       ! Extract scheme string
       local_scheme = ""
@@ -82,6 +89,10 @@ contains
          local_scheme(i:i) = active_scheme(i)
       end do
       local_scheme = trim(local_scheme)
+
+      ! Apply the YAML tuning option staged by the C++ process layer so the
+      ! scheme no longer runs on compiled defaults alone.
+      gocart_config%time_days_hydrophobic_to_hydrophilic = real(gocart_time_days_hydrophobic_to_hydrophilic, fp)
 
       ! Map Pointers
       call c_f_pointer(airden, f_airden, [n_cols, n_levels])
@@ -140,8 +151,18 @@ contains
                diagnostic_species_id=diagnostic_species_id)
          end if
 
-         ! Copy back tendency
-         f_tendency(icol, :, :) = f_tendency(icol, :, :) + real(col_tendency(:, :), c_double)
+         ! GOCART carbon returns updated aerosol concentrations in ug/kg for computed species.
+         ! Extract the tendency from the updated concentrations and apply it.
+         do i = 1, n_species
+            if (any(abs(col_tendency(:, i)) > 1.0e-32_fp)) then
+               ! col_tendency contains the NEW concentration in ug/kg.
+               ! Calculate rate of change and update conc/tendency in-place.
+               f_tendency(icol, :, i) = (real(col_tendency(:, i), c_double) - f_conc(icol, :, i)) / dt
+               f_conc(icol, :, i)     = real(col_tendency(:, i), c_double)
+            else
+               f_tendency(icol, :, i) = 0.0_c_double
+            end if
+         end do
 
          if (diagnostics /= 0) then
             f_diag_prod_mass(icol, :, :) = real(col_prod_mass(:, :), c_double)

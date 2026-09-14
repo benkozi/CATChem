@@ -1,29 +1,22 @@
 !> \file test_CATChem_API.f90
-!! \brief Init-sequence test for the high-level CATChem_Model API.
+!! \brief Modernized API integration test for the high-level CATChem_Model API.
 !!
-!! Mirrors the NUOPC cap's usage so the Fortran state facade over the
-!! C++-owned state is covered without ESMF:
-!!   initialize -> get_state_manager -> get_met_state_ptr -> write lat/lon
-!!   -> run_timestep -> finalize
-!! Also asserts that grid dimensions are host-supplied (rank-local), not
-!! taken from the YAML grid section.
+!! Tests CATChem_Model without Fortran core state facades:
+!!   initialize -> bind_met_2d / bind_met_3d -> run_timestep -> finalize
 program test_CATChem_API
+   use iso_c_binding, only: c_double
    use CATChem_API, only: CATChem_Model
-   use StateManager_Mod, only: StateManagerType
-   use MetState_Mod, only: MetStateType
-   use ChemState_Mod, only: ChemStateType
-   use Error_Mod, only: ErrorManagerType, CC_SUCCESS
-   use precision_mod, only: fp
+   use catchem_bridge_precision, only: fp
    implicit none
 
    type(CATChem_Model) :: model
-   type(StateManagerType), pointer :: sm
-   type(MetStateType), pointer :: met
-   type(ChemStateType), pointer :: chem
-   type(ErrorManagerType), pointer :: em
-   real(fp), allocatable :: z0_cm(:, :)
-   integer :: rc
+   real(c_double), target, allocatable :: lat(:,:), lon(:,:), temp(:,:,:), wrong_temp(:,:,:)
+   real(c_double), target, allocatable :: sst(:,:), frocean(:,:), frseaice(:,:), ustar(:,:), u10m(:,:), v10m(:,:)
+   real(c_double), target, allocatable :: delp(:,:,:), pedge(:,:,:), chem_conc(:,:,:)
+   integer :: rc, g_nx, g_ny, g_nz, issue_count
+   character(len=512) :: physical_detail
    integer, parameter :: nx = 4, ny = 2, nz = 5
+   integer, parameter :: n_species = 22
    character(len=*), parameter :: config_file = 'CATChem_new_config.yml'
    logical :: exists
 
@@ -33,8 +26,7 @@ program test_CATChem_API
       error stop 1
    end if
 
-   ! 1. Initialize with host-local grid dimensions (the YAML grid section
-   !    says 64 levels; the host dims below must win).
+   ! 1. Initialize with host-local grid dimensions
    call model%initialize(config_file, nx, ny, nz, rc=rc)
    if (rc /= 0) then
       print *, 'FAIL: model initialize rc=', rc
@@ -44,96 +36,102 @@ program test_CATChem_API
       print *, 'FAIL: model dims not host-supplied:', model%nx, model%ny, model%nz
       error stop 1
    end if
+   if (model%get_num_processes() /= 1) then
+      print *, 'FAIL: configured process count not owned by C++ Core:', model%get_num_processes()
+      error stop 1
+   end if
+   if (.not. model%is_process_active('seasalt')) then
+      print *, 'FAIL: process seasalt not active in config'
+      error stop 1
+   end if
    print *, 'PASS: initialize with host-local grid dimensions'
 
-   ! 2. The facade must be constructed and fully wired.
-   sm => model%get_state_manager()
-   met => sm%get_met_state_ptr()
-   if (.not. associated(met)) then
-      print *, 'FAIL: met state facade not associated'
+   call model%set_physical_validation_policy(1, rc)
+   if (rc /= 0) error stop 'FAIL: could not set physical validation policy'
+   call model%get_physical_validation_report(issue_count, physical_detail, rc)
+   if (rc /= 0 .or. issue_count /= 0 .or. len_trim(physical_detail) /= 0) then
+      error stop 'FAIL: initial physical report was not empty'
+   end if
+   call model%set_physical_validation_policy(99, rc)
+   if (rc /= 8 .or. index(model%last_error, 'supported enumeration') == 0) then
+      print *, 'FAIL: physical policy status/detail not preserved:', rc, trim(model%last_error)
       error stop 1
    end if
-   if (.not. associated(met%LAT) .or. .not. associated(met%LON)) then
-      print *, 'FAIL: LAT/LON not bound through the C++ state'
-      error stop 1
-   end if
-   if (.not. associated(met%AREA_M2)) then
-      print *, 'FAIL: AREA_M2 not allocated/bound'
-      error stop 1
-   end if
-   print *, 'PASS: facade constructed, met arrays bound'
+   call model%set_physical_validation_policy(1, rc)
+   print *, 'PASS: physical policy and report facade'
 
-   ! 3. Write lat/lon the way the cap does, then re-fetch the facade to
-   !    prove the values live in the shared (C++-registered) buffers.
-   met%LAT = 40.0_fp
-   met%LON = 250.0_fp
-   where (met%LON > 180.0_fp)
-      met%LON = met%LON - 360.0_fp
-   end where
+   ! 2. Grid dimensions check
+   call model%get_grid_dimensions(g_nx, g_ny, g_nz)
+   if (g_nx /= nx .or. g_ny /= ny .or. g_nz /= nz) then
+      print *, 'FAIL: get_grid_dimensions returned unexpected dims:', g_nx, g_ny, g_nz
+      error stop 1
+   end if
+   print *, 'PASS: grid dimensions query'
 
-   met => sm%get_met_state_ptr()
-   if (abs(met%LAT(1, 1) - 40.0_fp) > 1.0e-12_fp) then
-      print *, 'FAIL: LAT not persisted through shared buffer:', met%LAT(1, 1)
-      error stop 1
-   end if
-   if (abs(met%LON(nx, ny) + 110.0_fp) > 1.0e-12_fp) then
-      print *, 'FAIL: LON not persisted/converted:', met%LON(nx, ny)
-      error stop 1
-   end if
-   print *, 'PASS: lat/lon written and persisted through shared buffers'
+   ! 3. Bind 2D and 3D meteorology arrays directly
+   allocate(lat(nx, ny))
+   allocate(lon(nx, ny))
+   allocate(sst(nx, ny))
+   allocate(frocean(nx, ny))
+   allocate(frseaice(nx, ny))
+   allocate(ustar(nx, ny))
+   allocate(u10m(nx, ny))
+   allocate(v10m(nx, ny))
+   allocate(temp(nx*ny, 1, nz))
+   allocate(delp(nx*ny, 1, nz))
+   allocate(pedge(nx*ny, 1, nz + 1))
+   allocate(chem_conc(nx*ny, nz, n_species))
 
-   ! 3b. Replay the NUOPC transform's Z0 path (cm -> m conversion via
-   !     set_field) — the 2026-08-11 run-phase abort regression.
-   if (.not. associated(met%Z0)) then
-      print *, 'FAIL: Z0 not allocated/bound by the facade'
-      error stop 1
-   end if
-   em => sm%get_error_manager()
-   allocate(z0_cm(nx, ny))
-   z0_cm = 150.0_fp
-   call met%set_field('Z0', z0_cm*0.01_fp, em, rc)
-   if (rc /= CC_SUCCESS) then
-      print *, 'FAIL: set_field(Z0) rc=', rc, ' (missing case)'
-      error stop 1
-   end if
-   met => sm%get_met_state_ptr()
-   if (abs(met%Z0(1, 1) - 1.5_fp) > 1.0e-12_fp) then
-      print *, 'FAIL: Z0 not persisted through shared buffer:', met%Z0(1, 1)
-      error stop 1
-   end if
-   deallocate(z0_cm)
-   print *, 'PASS: Z0 transform path (set_field + shared buffer)'
+   lat = 40.0_c_double
+   lon = 250.0_c_double
+   sst = 290.0_c_double
+   frocean = 1.0_c_double
+   frseaice = 0.0_c_double
+   ustar = 0.5_c_double
+   u10m = 5.0_c_double
+   v10m = 2.0_c_double
+   temp = 290.0_c_double
+   delp = 1000.0_c_double
+   ! Strictly positive, descending pressure interface (surface -> top) so the
+   ! seasalt process (and derive_delp) sees a valid layer thickness.
+   block
+      integer :: lev
+      do lev = 1, nz + 1
+         pedge(:, :, lev) = 101325.0_c_double - 1000.0_c_double * real(lev - 1, c_double)
+      end do
+   end block
+   chem_conc = 0.0_c_double
 
-   ! 3c. Chem facade: the config declares species_filename, so species
-   !     must be loaded C++-side and mirrored into the Fortran
-   !     ChemSpecies metadata (the PM-diagnostics prerequisite).
-   chem => sm%get_chem_state_ptr()
-   if (.not. allocated(chem%ChemSpecies)) then
-      print *, 'FAIL: ChemSpecies not allocated (species facade unwired)'
-      error stop 1
-   end if
-   if (size(chem%ChemSpecies) < 1) then
-      print *, 'FAIL: no species mirrored into the chem facade'
-      error stop 1
-   end if
-   if (.not. any(chem%ChemSpecies(:)%is_aerosol)) then
-      print *, 'FAIL: no aerosol species in the chem facade'
-      error stop 1
-   end if
-   print *, 'PASS: chem facade populated (', size(chem%ChemSpecies), ' species)'
+   call model%bind_met_2d('LAT', lat)
+   call model%bind_met_2d('LON', lon)
+   call model%bind_met_2d('SST', sst)
+   call model%bind_met_2d('FROCEAN', frocean)
+   call model%bind_met_2d('FRSEAICE', frseaice)
+   call model%bind_met_2d('USTAR', ustar)
+   call model%bind_met_2d('U10M', u10m)
+   call model%bind_met_2d('V10M', v10m)
+   call model%bind_met_3d('T', temp)
+   call model%bind_met_3d('DELP', delp)
+   call model%bind_met_3d('PEDGE', pedge)
+   call model%bind_unified_chemistry(chem_conc)
+   print *, 'PASS: met arrays bound directly to C++ core'
 
-   ! 4. Error manager and time state facades exist (run phase uses them).
-   if (.not. associated(sm%get_error_manager())) then
-      print *, 'FAIL: error manager facade missing'
+   ! Checked calls preserve the exact boundary category and detail text.
+   allocate(wrong_temp(nx*ny - 1, 1, nz))
+   wrong_temp = 290.0_c_double
+   call model%bind_met_3d('T', wrong_temp, rc)
+   if (rc /= 4) then
+      print *, 'FAIL: expected extent-mismatch status 4, got ', rc
       error stop 1
    end if
-   if (.not. associated(sm%get_time_state_ptr())) then
-      print *, 'FAIL: time state facade missing'
+   if (index(model%last_error, 'field extents') == 0) then
+      print *, 'FAIL: missing preserved boundary detail: ', trim(model%last_error)
       error stop 1
    end if
-   print *, 'PASS: error/time facades present'
+   deallocate(wrong_temp)
+   print *, 'PASS: checked status and detail propagation'
 
-   ! 5. A timestep runs (no processes registered; exercises sync paths).
+   ! 4. A timestep runs
    call model%run_timestep(1, 300.0_fp, rc)
    if (rc /= 0) then
       print *, 'FAIL: run_timestep rc=', rc
@@ -141,12 +139,15 @@ program test_CATChem_API
    end if
    print *, 'PASS: run_timestep'
 
+   ! 5. Finalize
    call model%finalize(rc)
    if (rc /= 0) then
       print *, 'FAIL: finalize rc=', rc
       error stop 1
    end if
    print *, 'PASS: finalize'
+
+   deallocate(lat, lon, sst, frocean, frseaice, ustar, u10m, v10m, temp, delp, pedge, chem_conc)
 
    print *, 'All CATChem_API init-sequence tests passed!'
 end program test_CATChem_API
