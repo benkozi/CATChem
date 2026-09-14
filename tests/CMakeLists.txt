@@ -745,6 +745,20 @@ if(CATCHEM_BUILD_NUOPC)
   # libesmf.a references the MPI C++ bindings; an executable link needs
   # them explicitly (the cap static library never resolves them itself).
   find_package(MPI COMPONENTS Fortran CXX REQUIRED)
+
+  # ctest-forked MPI programs inside a Slurm job step share one PMI
+  # endpoint, which serves only the first of them; the second dies in
+  # MPI_Init (SIGPIPE on the consumed socket). Launch each MPI test
+  # through mpiexec so every test gets its own MPI world regardless of
+  # ordering — same pattern as CECE (PR #83). TEST_LAUNCHER needs CMake
+  # >= 3.29; older ctest ignores it and runs the raw binary (safe where
+  # no Slurm environment exists, e.g. the containers).
+  if(POLICY CMP0178)
+    # New behavior ignores TEST_LAUNCHER documentation about
+    # semicolon-separated lists
+    cmake_policy(SET CMP0178 OLD)
+  endif()
+
   add_executable(test_nuopc_transform test_nuopc_transform.f90)
   target_link_libraries(
     test_nuopc_transform
@@ -755,6 +769,8 @@ if(CATCHEM_BUILD_NUOPC)
     PROPERTIES
       Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include
       LINKER_LANGUAGE Fortran
+      TEST_LAUNCHER
+        "${MPIEXEC_EXECUTABLE};${MPIEXEC_NUMPROC_FLAG};1;${MPIEXEC_PREFLAGS}"
   )
   target_include_directories(
     test_nuopc_transform
@@ -796,6 +812,8 @@ if(CATCHEM_BUILD_NUOPC)
     PROPERTIES
       Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include
       LINKER_LANGUAGE Fortran
+      TEST_LAUNCHER
+        "${MPIEXEC_EXECUTABLE};${MPIEXEC_NUMPROC_FLAG};1;${MPIEXEC_PREFLAGS}"
   )
   target_include_directories(
     nuopc_contract_harness
