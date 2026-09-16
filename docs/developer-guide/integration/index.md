@@ -198,5 +198,5 @@ diagnostics:
 ## See Also
 
 - [Process Development](../processes/index.md)
-- [Core Systems](../core/index.md)
-- [Configuration Guide](../core/configuration.md)
+- [Core Concepts](../../core-concepts/index.md)
+- [Configuration Guide](../../core-concepts/configuration.md)
