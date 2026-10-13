@@ -6,7 +6,7 @@ on:
     # Merges run here, not on `push`: GitHub never applies [ci skip] markers to
     # this event, so a marker in a squashed commit body cannot suppress CI.
     types: [closed]
-    branches: [main, develop]
+    branches: [main, develop, test/prt-base]
   workflow_dispatch:
   # Deliberately NO `push` trigger for main/develop. Python Semantic Release pushes
   # its version-bump commit directly to the branch; with no push subscription that
