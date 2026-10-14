@@ -1,2 +1,7 @@
 build/
 cmake-build-debug/
+# Keep git metadata out of the build context: it changes with every commit and
+# differs between shallow and full clones, which invalidates the `COPY . ...`
+# layer and forces a full rebuild in docker-release. Nothing in the build uses git.
+.git
+**/.git
