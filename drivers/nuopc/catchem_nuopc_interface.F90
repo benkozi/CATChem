@@ -1746,7 +1746,10 @@ contains
    !! Called once from the cap's DataInitialize, after catchem_nuopc_init created the categories and after the
    !! connector completed the reference-shared fields. An entry that is absent from the state was not connected
    !! (the cap removed it in RealizeAccepted) and is skipped; a present one must be rank 3 with nx x ny x nlev,
-   !! and its category must be all imports or all file (catchem_emis_finish_binding).
+   !! and its category must be all imports or all file (catchem_emis_finish_binding). The binding keeps the
+   !! import's pointer for the whole run with no copy-in step, so a connected import must be reference-shared:
+   !! its ShareStatusField is logged and "not shared" is an error (a field without NUOPC attributes, as the
+   !! contract harness builds directly, is logged as unknown and bound).
    subroutine catchem_emis_bind_imports(cc_wrap, importState, rc)
       type(cc_wrap_type), intent(inout) :: cc_wrap
       type(ESMF_State), intent(in) :: importState
@@ -1756,8 +1759,9 @@ contains
       type(ESMF_StateItem_Flag) :: item_type
       real(ESMF_KIND_R8), pointer :: fptr3d(:,:,:)
       character(len=NUOPC_LONG_NAME_LEN) :: path, category_name, variable_name
+      character(len=ESMF_MAXSTR) :: share_status
       integer :: n, islash, n_bound, localrc
-      logical :: bound
+      logical :: bound, share_present, share_set
       character(len=NUOPC_PATH_LEN) :: msg
 
       rc = ESMF_SUCCESS
@@ -1783,6 +1787,21 @@ contains
          call ESMF_StateGet(importState, trim(cc_wrap%field_config%import_fields(n)%standard_name), field, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return
+         ! NUOPC_refdoc 3.9.7 (isPresent/isSet: no error when absent) and 2.4.8 (ShareStatusField)
+         call NUOPC_GetAttribute(field, name="ShareStatusField", value=share_status, &
+            isPresent=share_present, isSet=share_set, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         if (.not. (share_present .and. share_set)) share_status = 'unknown'
+         call ESMF_LogWrite("CATChem: emission import "//trim(cc_wrap%field_config%import_fields(n)%standard_name)// &
+            " ShareStatusField="//trim(share_status), ESMF_LOGMSG_INFO, rc=localrc)
+         if (trim(share_status) == 'not shared') then
+            call ESMF_LogWrite("CATChem: emission import "//trim(cc_wrap%field_config%import_fields(n)%standard_name)// &
+               " is not reference-shared (ShareStatusField="//trim(share_status)// &
+               "); the cap binds the provider's memory", ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = ESMF_FAILURE
+            return
+         end if
          nullify(fptr3d)
          call ESMF_FieldGet(field, farrayPtr=fptr3d, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg="CATChem: emission import "// &

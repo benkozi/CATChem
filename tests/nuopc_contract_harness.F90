@@ -685,9 +685,24 @@ program nuopc_contract_harness
    call check(rc, "StateRemove the wrong-extent field")
    call ESMF_FieldDestroy(bad_field, rc=rc)
    call check(rc, "FieldDestroy the wrong-extent field")
+   ! The sharing rule: a connected import the connector did not reference-share is refused by name.
+   bad_field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
+      ungriddedLBound=(/1/), ungriddedUBound=(/nz/), name='extemis_anthro_NO', rc=rc)
+   call check(rc, "FieldCreate an unshared extemis_anthro_NO")
+   call set_share_status(bad_field, 'not shared')
+   call ESMF_StateAdd(importState, (/bad_field/), rc=rc)
+   call check(rc, "StateAdd an unshared extemis_anthro_NO")
+   call catchem_emis_bind_imports(cc_wrap, importState, rc)
+   if (rc == ESMF_SUCCESS) error stop 'an emission import with ShareStatusField=not shared was accepted'
+   print *, 'PASS: emission import sharing check rejects ShareStatusField=not shared (named error in the log)'
+   call ESMF_StateRemove(importState, (/'extemis_anthro_NO'/), rc=rc)
+   call check(rc, "StateRemove the unshared field")
+   call ESMF_FieldDestroy(bad_field, rc=rc)
+   call check(rc, "FieldDestroy the unshared field")
    field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
       ungriddedLBound=(/1/), ungriddedUBound=(/nz/), name='extemis_anthro_NO', rc=rc)
    call check(rc, "FieldCreate extemis_anthro_NO")
+   call set_share_status(field, 'shared')
    call ESMF_FieldGet(field, farrayPtr=fptr3, rc=rc)
    call check(rc, "FieldGet extemis_anthro_NO")
    fptr3 = 2.0e-10_ESMF_KIND_R8
@@ -890,5 +905,17 @@ contains
          error stop 1
       end if
    end subroutine check
+
+   !> The connector's verdict on a field, as NUOPC stores it (NUOPC_refdoc 2.3.6: key /NUOPC/Instance/<name>).
+   subroutine set_share_status(target_field, status)
+      type(ESMF_Field), intent(inout) :: target_field
+      character(len=*), intent(in) :: status
+      type(ESMF_Info) :: info
+      integer :: rc_info
+      call ESMF_InfoGetFromHost(target_field, info, rc=rc_info)
+      call check(rc_info, "InfoGetFromHost for ShareStatusField")
+      call ESMF_InfoSet(info, "/NUOPC/Instance/ShareStatusField", status, rc=rc_info)
+      call check(rc_info, "InfoSet ShareStatusField")
+   end subroutine set_share_status
 
 end program nuopc_contract_harness
