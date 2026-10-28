@@ -349,6 +349,8 @@ module catchem_nuopc_interface
    public :: catchem_nuopc_finalize
    public :: transform_nuopc_to_catchem
    public :: transform_catchem_to_nuopc
+   public :: catchem_emis_bind_imports  ! Bind connected emission imports (extemis/<category>/<variable>) to their fields
+   public :: is_emission_import         ! True for a mapping entry whose catchem_var is such a path
    public :: load_field_config
    public :: catchem_diagnostics_write
    public :: write_chem_diagnostics
@@ -1658,6 +1660,10 @@ contains
          if (cc_wrap%field_config%import_fields(n)%optional .and. &
             .not. cc_wrap%field_config%import_fields(n)%advertise) cycle
 
+         ! An emission import is not meteorology: catchem_emis_bind_imports handed its pointer to the
+         ! emission module once, and catchem_emis_update reads it every step.
+         if (is_emission_import(cc_wrap%field_config%import_fields(n))) cycle
+
          ! Try to get field from import state (will fail if not present)
          call ESMF_StateGet(importState, trim(cc_wrap%field_config%import_fields(n)%standard_name), field, rc=rc)
 
@@ -1727,6 +1733,82 @@ contains
       end if
 
    end subroutine transform_nuopc_to_catchem
+
+   !> True when a field-mapping entry names an external-emission input, catchem_var = extemis/<category>/<variable>
+   !! (the category and the file variable of processes/extemis in the science config and the emission map).
+   pure logical function is_emission_import(field_map)
+      type(field_mapping_type), intent(in) :: field_map
+      is_emission_import = (index(field_map%catchem_var, 'extemis/') == 1)
+   end function is_emission_import
+
+   !> \brief Bind every emission import present in the import state to its emission field
+   !!
+   !! Called once from the cap's DataInitialize, after catchem_nuopc_init created the categories and after the
+   !! connector completed the reference-shared fields. An entry that is absent from the state was not connected
+   !! (the cap removed it in RealizeAccepted) and is skipped; a present one must be rank 3 with nx x ny x nlev,
+   !! and its category must be all imports or all file (catchem_emis_finish_binding).
+   subroutine catchem_emis_bind_imports(cc_wrap, importState, rc)
+      type(cc_wrap_type), intent(inout) :: cc_wrap
+      type(ESMF_State), intent(in) :: importState
+      integer, intent(out) :: rc
+
+      type(ESMF_Field) :: field
+      type(ESMF_StateItem_Flag) :: item_type
+      real(ESMF_KIND_R8), pointer :: fptr3d(:,:,:)
+      character(len=NUOPC_LONG_NAME_LEN) :: path, category_name, variable_name
+      integer :: n, islash, n_bound, localrc
+      logical :: bound
+      character(len=NUOPC_PATH_LEN) :: msg
+
+      rc = ESMF_SUCCESS
+      n_bound = 0
+      do n = 1, cc_wrap%field_config%n_import_fields
+         if (.not. is_emission_import(cc_wrap%field_config%import_fields(n))) cycle
+         call ESMF_StateGet(importState, itemName=trim(cc_wrap%field_config%import_fields(n)%standard_name), &
+            itemType=item_type, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         if (item_type /= ESMF_STATEITEM_FIELD) cycle
+         path = cc_wrap%field_config%import_fields(n)%catchem_var(9:)
+         islash = index(path, '/')
+         if (islash <= 1 .or. islash >= len_trim(path)) then
+            call ESMF_LogWrite("CATChem: emission import "//trim(cc_wrap%field_config%import_fields(n)%standard_name)// &
+               ": catchem_var must be extemis/<category>/<variable>, got "// &
+               trim(cc_wrap%field_config%import_fields(n)%catchem_var), ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = ESMF_FAILURE
+            return
+         end if
+         category_name = path(1:islash - 1)
+         variable_name = path(islash + 1:)
+         call ESMF_StateGet(importState, trim(cc_wrap%field_config%import_fields(n)%standard_name), field, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         nullify(fptr3d)
+         call ESMF_FieldGet(field, farrayPtr=fptr3d, rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg="CATChem: emission import "// &
+            trim(cc_wrap%field_config%import_fields(n)%standard_name)//" is not a rank-3 field", &
+            line=__LINE__, file=__FILE__)) return
+         call catchem_emis_bind_import(cc_wrap%ext_emis, trim(category_name), trim(variable_name), &
+            trim(cc_wrap%field_config%import_fields(n)%standard_name), fptr3d, &
+            cc_wrap%catchem_model%nx, cc_wrap%catchem_model%ny, cc_wrap%catchem_model%nz, bound, localrc)
+         if (localrc /= CC_SUCCESS) then
+            call ESMF_LogWrite("CATChem: binding emission import "// &
+               trim(cc_wrap%field_config%import_fields(n)%standard_name)//" failed", ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = ESMF_FAILURE
+            return
+         end if
+         if (bound) n_bound = n_bound + 1
+      end do
+      call catchem_emis_finish_binding(cc_wrap%ext_emis, localrc)
+      if (localrc /= CC_SUCCESS) then
+         rc = ESMF_FAILURE
+         return
+      end if
+      write(msg, '(A,I0,A)') 'CATChem: ', n_bound, ' emission import(s) bound to emission fields'
+      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=localrc)
+      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+   end subroutine catchem_emis_bind_imports
 
    ! Transform CATChem states to NUOPC export fields
    !!

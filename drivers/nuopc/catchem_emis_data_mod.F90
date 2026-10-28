@@ -15,6 +15,7 @@ MODULE catchem_nuopc_emis_data_mod
    !=========================================================================
    ! Module uses
    !=========================================================================
+   use ESMF, only: ESMF_KIND_R8
    use catchem_bridge_error
    use catchem_nuopc_lengths
    use catchem_regrid_mod, only: RegridCache
@@ -73,6 +74,11 @@ MODULE catchem_nuopc_emis_data_mod
       LOGICAL                       :: is_loaded = .false. !< Data loading status
       LOGICAL                       :: is_valid = .false.  !< Data validation status
       CHARACTER(LEN=NUOPC_KEYWORD_LEN)             :: interpolation_method = 'bilinear' !< Spatial interpolation method
+      !> A connected NUOPC import (reference-shared provider memory, nx x ny x nlev on the model grid) that
+      !! replaces the file readers for this field; set by catchem_emis_bind_import, read every step by
+      !! catchem_emis_copy_imports. Level 1 is the surface.
+      REAL(ESMF_KIND_R8), POINTER   :: import_data(:,:,:) => null()
+      LOGICAL                       :: from_import = .false. !< True when import_data is the source of this field
    CONTAINS
       !> \brief Initialize emission field with metadata
       !! \copydoc extemifield_init
@@ -156,6 +162,7 @@ MODULE catchem_nuopc_emis_data_mod
       LOGICAL                                   :: diurnal_bb = .false. !< Apply diurnal cycle to biomass burning emissions?
       CHARACTER(LEN=NUOPC_SHORT_LEN)                         :: apply_method = 'add' !< How to apply data: 'add' (accumulate) or 'replace' (overwrite concentration)
       LOGICAL                                   :: needs_time_blend = .false. !< Per-timestep temporal blending needed
+      LOGICAL                                   :: from_import = .false. !< True when every field of the category is bound to a NUOPC import (no file reads, no time blend)
 
    CONTAINS
       !> \brief Initialize emission category with metadata

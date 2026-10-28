@@ -52,6 +52,9 @@ module catchem_nuopc_emis_mod
    ! Public interfaces
    public :: catchem_emis_init
    public :: catchem_emis_update
+   public :: catchem_emis_bind_import
+   public :: catchem_emis_finish_binding
+   public :: catchem_emis_copy_imports
    public :: catchem_emis_finalize
    public :: catchem_emis_write_diagnostics
    public :: catchem_map_points_to_grid
@@ -397,6 +400,21 @@ contains
       do i = 1, ext_emis_data%n_categories
          if (.not. ext_emis_data%categories(i)%is_active) cycle
 
+         if (ext_emis_data%categories(i)%from_import) then
+            ! Every field of this category is a connected NUOPC import: the provider (CECE) regridded and
+            ! time-interpolated the slice already, so copy it in place of the period-key/read/blend machinery.
+            call catchem_emis_copy_imports(ext_emis_data%categories(i), nlev, localrc)
+            if (localrc /= CC_SUCCESS) then
+               write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to copy NUOPC imports for category: ', &
+                  trim(ext_emis_data%categories(i)%category_name)
+               call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+               rc = CC_FAILURE
+               return
+            end if
+         else
+
          ! Determine the current calendar period key for this category's frequency.
          call catchem_emis_period_key(ext_emis_data%categories(i)%frequency, &
             current_time, period_key, localrc)
@@ -492,6 +510,8 @@ contains
             end if
          end if
 
+         end if ! from_import
+
          call catchem_emis_apply(ext_emis_data%categories(i), ext_emis_data%global_scale, core_ptr, dt, current_time, localrc)
          if (localrc /= CC_SUCCESS) then
             write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to apply emissions for category: ', &
@@ -510,6 +530,172 @@ contains
          line=__LINE__, file=__FILE__, rcToReturn=rc)) return
 
    end subroutine catchem_emis_update
+
+   !> \brief Bind a connected NUOPC import to one gridded emission field
+   !!
+   !! The pointer is the provider's own allocation (NUOPC reference sharing), nx x ny x nlev on the model
+   !! grid with level 1 at the surface; catchem_emis_copy_imports reads it every step in place of the file
+   !! readers. An inactive or unconfigured category is not an error (bound stays .false.); a point category,
+   !! a field that is not in the category's emission map, or an extent other than nx x ny x nlev is.
+   subroutine catchem_emis_bind_import(ext_emis_data, category_name, field_name, standard_name, fptr, nx, ny, nlev, bound, rc)
+      type(ExtEmisDataType), intent(inout), target :: ext_emis_data
+      character(len=*), intent(in) :: category_name  !< Category of the mapping path extemis/<category>/<variable>
+      character(len=*), intent(in) :: field_name     !< File variable name (the key of the emission map)
+      character(len=*), intent(in) :: standard_name  !< NUOPC standard name, for the messages
+      real(ESMF_KIND_R8), pointer, intent(in) :: fptr(:,:,:) !< The import field's DE-local data
+      integer, intent(in) :: nx, ny, nlev            !< The model's local grid and level count
+      logical, intent(out) :: bound                  !< True when the field now reads from the import
+      integer, intent(out) :: rc
+
+      type(ExtEmisCategoryType), pointer :: category
+      integer :: icat, i, ifield, localrc
+      character(len=EMIS_MAXSTR) :: msg
+      character(len=*), parameter :: pName = 'catchem_emis_bind_import'
+
+      rc = CC_SUCCESS
+      bound = .false.
+      icat = 0
+      do i = 1, ext_emis_data%n_categories
+         if (trim(ext_emis_data%categories(i)%category_name) == trim(category_name)) then
+            icat = i
+            exit
+         end if
+      end do
+      if (icat == 0) then
+         call ESMF_LogWrite(trim(pName)//': import '//trim(standard_name)//' not bound: category '// &
+            trim(category_name)//' is not configured or not active', ESMF_LOGMSG_INFO, rc=localrc)
+         if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+         return
+      end if
+      category => ext_emis_data%categories(icat)
+      if (.not. category%is_active) then
+         call ESMF_LogWrite(trim(pName)//': import '//trim(standard_name)//' not bound: category '// &
+            trim(category_name)//' is inactive', ESMF_LOGMSG_INFO, rc=localrc)
+         if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+         return
+      end if
+      if (is_point_category(category) .or. .not. category%gridded) then
+         write(msg, '(A,A,A,A,A)') trim(pName), ': import ', trim(standard_name), ' targets the point category ', trim(category_name)
+         call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+         rc = CC_FAILURE
+         return
+      end if
+      ifield = category%find_field(trim(field_name))
+      if (ifield <= 0) then
+         write(msg, '(A,A,A,A,A,A,A)') trim(pName), ': import ', trim(standard_name), ': field ', trim(field_name), &
+            ' is not in the emission map of category ', trim(category_name)
+         call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+         rc = CC_FAILURE
+         return
+      end if
+      if (.not. associated(fptr)) then
+         call ESMF_LogWrite(trim(pName)//': import '//trim(standard_name)//' has no data pointer', ESMF_LOGMSG_ERROR, rc=localrc)
+         rc = CC_FAILURE
+         return
+      end if
+      if (size(fptr, 1) /= nx .or. size(fptr, 2) /= ny .or. size(fptr, 3) /= nlev) then
+         write(msg, '(A,A,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0)') 'CATChem: emission import ', trim(standard_name), ' has ', &
+            size(fptr, 3), ' levels on ', size(fptr, 1), 'x', size(fptr, 2), ', expected ', nlev, ' on ', nx, 'x', ny
+         call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+         rc = CC_FAILURE
+         return
+      end if
+      category%fields(ifield)%import_data => fptr
+      category%fields(ifield)%from_import = .true.
+      bound = .true.
+      call ESMF_LogWrite('CATChem: bound emission import '//trim(standard_name)//' to '//trim(category_name)// &
+         '/'//trim(field_name), ESMF_LOGMSG_INFO, rc=localrc)
+      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+   end subroutine catchem_emis_bind_import
+
+   !> \brief Settle, after all bindings, which categories read from imports
+   !!
+   !! A category is import-fed only when every one of its fields is bound; a partly bound category is an
+   !! error (a silent mix of file and import data would be impossible to reason about).
+   subroutine catchem_emis_finish_binding(ext_emis_data, rc)
+      type(ExtEmisDataType), intent(inout) :: ext_emis_data
+      integer, intent(out) :: rc
+
+      integer :: i, j, n_bound, localrc
+      character(len=EMIS_MAXSTR) :: msg
+      character(len=*), parameter :: pName = 'catchem_emis_finish_binding'
+
+      rc = CC_SUCCESS
+      do i = 1, ext_emis_data%n_categories
+         if (.not. ext_emis_data%categories(i)%is_active) cycle
+         n_bound = 0
+         do j = 1, ext_emis_data%categories(i)%n_fields
+            if (ext_emis_data%categories(i)%fields(j)%from_import) n_bound = n_bound + 1
+         end do
+         if (n_bound == 0) cycle
+         if (n_bound /= ext_emis_data%categories(i)%n_fields) then
+            write(msg, '(A,A,A,I0,A,I0,A)') trim(pName), ': category ', trim(ext_emis_data%categories(i)%category_name), ': ', &
+               n_bound, ' of ', ext_emis_data%categories(i)%n_fields, ' fields come from imports; a category is all imports or all file'
+            call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = CC_FAILURE
+            return
+         end if
+         ext_emis_data%categories(i)%from_import = .true.
+         write(msg, '(A,A,A,I0,A)') 'CATChem: category ', trim(ext_emis_data%categories(i)%category_name), ': ', n_bound, &
+            ' field(s) read from NUOPC imports'
+         call ESMF_LogWrite(msg, ESMF_LOGMSG_INFO, rc=localrc)
+         if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+      end do
+   end subroutine catchem_emis_finish_binding
+
+   !> \brief Copy the current slice of every bound import into the category's emission_data
+   !!
+   !! Keeps the shape contract of the file readers, (nx, ny, nlev, 1) for every field (the reader resizes 3-D
+   !! fields only, extemifield_init allocates the model levels): a 2-D category takes the import's level 1 and
+   !! zero above it, a 3-D one every level, flipped when the category sets reverse_vertical. Called every step;
+   !! the provider's time interpolation makes the period keys and the blend unnecessary.
+   subroutine catchem_emis_copy_imports(category, nlev, rc)
+      type(ExtEmisCategoryType), intent(inout) :: category
+      integer, intent(in) :: nlev
+      integer, intent(out) :: rc
+
+      integer :: ifield, nx, ny, nz_field, localrc
+      character(len=EMIS_MAXSTR) :: msg
+      character(len=*), parameter :: pName = 'catchem_emis_copy_imports'
+
+      rc = CC_SUCCESS
+      do ifield = 1, category%n_fields
+         if (.not. category%fields(ifield)%from_import .or. .not. associated(category%fields(ifield)%import_data)) then
+            write(msg, '(A,A,A,A,A)') trim(pName), ': field ', trim(category%fields(ifield)%field_name), ' of category ', &
+               trim(category%category_name)//' has no bound import'
+            call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = CC_FAILURE
+            return
+         end if
+         nx = size(category%fields(ifield)%import_data, 1)
+         ny = size(category%fields(ifield)%import_data, 2)
+         nz_field = nlev
+         if (allocated(category%fields(ifield)%emission_data)) then
+            if (size(category%fields(ifield)%emission_data, 1) /= nx .or. &
+               size(category%fields(ifield)%emission_data, 2) /= ny .or. &
+               size(category%fields(ifield)%emission_data, 3) /= nz_field .or. &
+               size(category%fields(ifield)%emission_data, 4) /= 1) deallocate(category%fields(ifield)%emission_data)
+         end if
+         if (.not. allocated(category%fields(ifield)%emission_data)) allocate(category%fields(ifield)%emission_data(nx, ny, nz_field, 1))
+         if (category%is_2d) then
+            category%fields(ifield)%emission_data(:,:,:,1) = 0.0_fp
+            category%fields(ifield)%emission_data(:,:,1,1) = real(category%fields(ifield)%import_data(:,:,1), fp)
+         else if (category%reverse_vertical) then
+            category%fields(ifield)%emission_data(:,:,:,1) = real(category%fields(ifield)%import_data(:,:,nlev:1:-1), fp)
+         else
+            category%fields(ifield)%emission_data(:,:,:,1) = real(category%fields(ifield)%import_data(:,:,1:nlev), fp)
+         end if
+         category%fields(ifield)%nx = nx
+         category%fields(ifield)%ny = ny
+         category%fields(ifield)%nz = nz_field
+         category%fields(ifield)%is_2d = category%is_2d
+         category%fields(ifield)%is_loaded = .true.
+      end do
+   end subroutine catchem_emis_copy_imports
 
    !> Inspect the source variables rather than assuming that every field in a
    !! category has the category-level rank.  AQMIO files commonly combine

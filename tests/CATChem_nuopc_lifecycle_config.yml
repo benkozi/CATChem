@@ -36,7 +36,29 @@ processes:
     activate: true
     diagnostics: false
     scheme: geos12
-  # The NUOPC emissions adapter has an explicit independent switch.  Keep it
-  # off here so this lifecycle test has no external data dependency.
+  # The NUOPC emissions adapter: one gridded category, anthro, fed by the
+  # NUOPC emission imports (field-mapping entries extemis/anthro/<variable>)
+  # that the DataATM mock provides; no source_file, so nothing is read from
+  # disk and an unconnected import would fail loudly instead of falling back
+  # to a file. The other categories of CATChem_emission.yml stay inactive.
   extemis:
-    activate: false
+    activate: true
+    global_diagnostics: false
+    anthro:
+      activate: true
+      scale_factor: 1.0
+      format: "netcdf"
+      gridded: true
+      is_2d: true
+      frequency: "hourly"
+      time_interpolation: none
+      apply_method: add
+      vertical_dist: none
+      reverse_vertical: false
+      diagnostics: false
+    # A category of CATChem_emission.yml without a block here is active by
+    # default: keep the two climatologies off so only anthro binds.
+    gmi:
+      activate: false
+    dms:
+      activate: false

@@ -139,6 +139,12 @@ contains
        case (3)
          nullify(f3); call ESMF_FieldGet(field, farrayPtr=f3, rc=rc)
          if (rc /= ESMF_SUCCESS) return
+         if (index(trim(field_name), 'extemis_') == 1) then
+            ! An emission import (extemis_<category>_<variable>): a small flux on every level; the cap takes
+            ! level 1 for a 2-D category.
+            f3 = 1.0e-10_ESMF_KIND_R8
+            return
+         end if
          select case (trim(field_name))
           case ('inst_pres_interface')
             do k = 1, size(f3, 3)
@@ -344,7 +350,9 @@ program nuopc_contract_harness
    use contract_driver_services, only: ContractDriver_SetServices => SetServices, &
       driver_services_seen
    use catchem_nuopc_interface, only: load_field_config, transform_nuopc_to_catchem, &
-      transform_catchem_to_nuopc, field_config, cc_wrap_type, update_pm_diagnostics
+      transform_catchem_to_nuopc, field_config, cc_wrap_type, update_pm_diagnostics, &
+      catchem_emis_bind_imports
+   use catchem_nuopc_emis_mod, only: catchem_emis_init, catchem_emis_copy_imports
    use catchem_bridge_error, only: CC_SUCCESS
    use catchem_bridge_precision, only: fp, exact_equal
    use CATChem_API, only: CATChem_Model
@@ -403,6 +411,11 @@ program nuopc_contract_harness
    type(ESMF_Array) :: array
    type(ESMF_Info) :: tracer_info
    type(ESMF_Time) :: currTime
+   type(ESMF_Clock) :: emis_clock
+   type(ESMF_Time) :: emis_start, emis_stop
+   type(ESMF_TimeInterval) :: emis_step
+   type(ESMF_Field) :: bad_field
+   integer :: anthro_idx, ino
    real(ESMF_KIND_R8), pointer :: fptr2(:, :), fptr3(:, :, :), fptr4(:, :, :, :)
    real(c_double), pointer :: z0_ptr(:,:) => null()
    type(c_ptr) :: raw_z0_ptr
@@ -639,6 +652,62 @@ program nuopc_contract_harness
       call ESMF_StateAdd(importState, (/field/), rc=rc)
       call check(rc, "StateAdd")
    end do
+
+   ! 3b. Emission imports (mapping entries extemis/<category>/<variable>). The lifecycle config activates the
+   !     anthro category, so its seven imports bind to the anthro fields; a field whose level count disagrees
+   !     with the model is rejected by name, and the copy lands level 1 of the import in emission_data.
+   call ESMF_TimeIntervalSet(emis_step, s=600, rc=rc)
+   call check(rc, "emission clock step")
+   call ESMF_TimeSet(emis_start, yy=2021, mm=3, dd=22, h=6, rc=rc)
+   call check(rc, "emission clock start")
+   emis_stop = emis_start + emis_step
+   emis_clock = ESMF_ClockCreate(timeStep=emis_step, startTime=emis_start, stopTime=emis_stop, rc=rc)
+   call check(rc, "emission clock")
+   call catchem_emis_init(cc_wrap%ext_emis, cc_wrap%catchem_model%cpp_core_ptr, nx, ny, nz, emis_clock, rc)
+   if (rc /= CC_SUCCESS) error stop 'catchem_emis_init failed for the lifecycle config'
+   anthro_idx = 0
+   do i = 1, cc_wrap%ext_emis%n_categories
+      if (trim(cc_wrap%ext_emis%categories(i)%category_name) == 'anthro') anthro_idx = i
+   end do
+   if (anthro_idx == 0) error stop 'the lifecycle config did not configure the anthro category'
+   ! The negative case: extemis_anthro_NO with nz + 1 levels must be refused by name.
+   call ESMF_StateRemove(importState, (/'extemis_anthro_NO'/), rc=rc)
+   call check(rc, "StateRemove extemis_anthro_NO")
+   bad_field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
+      ungriddedLBound=(/1/), ungriddedUBound=(/nz + 1/), name='extemis_anthro_NO', rc=rc)
+   call check(rc, "FieldCreate extemis_anthro_NO with nz + 1 levels")
+   call ESMF_StateAdd(importState, (/bad_field/), rc=rc)
+   call check(rc, "StateAdd extemis_anthro_NO with nz + 1 levels")
+   call catchem_emis_bind_imports(cc_wrap, importState, rc)
+   if (rc == ESMF_SUCCESS) error stop 'an emission import with nz + 1 levels was accepted'
+   print *, 'PASS: emission import level-extent check rejects nz + 1 levels (named error in the log)'
+   call ESMF_StateRemove(importState, (/'extemis_anthro_NO'/), rc=rc)
+   call check(rc, "StateRemove the wrong-extent field")
+   call ESMF_FieldDestroy(bad_field, rc=rc)
+   call check(rc, "FieldDestroy the wrong-extent field")
+   field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, &
+      ungriddedLBound=(/1/), ungriddedUBound=(/nz/), name='extemis_anthro_NO', rc=rc)
+   call check(rc, "FieldCreate extemis_anthro_NO")
+   call ESMF_FieldGet(field, farrayPtr=fptr3, rc=rc)
+   call check(rc, "FieldGet extemis_anthro_NO")
+   fptr3 = 2.0e-10_ESMF_KIND_R8
+   call ESMF_StateAdd(importState, (/field/), rc=rc)
+   call check(rc, "StateAdd extemis_anthro_NO")
+   call catchem_emis_bind_imports(cc_wrap, importState, rc)
+   if (rc /= ESMF_SUCCESS) error stop 'catchem_emis_bind_imports failed on the valid import state'
+   if (.not. cc_wrap%ext_emis%categories(anthro_idx)%from_import) error stop 'anthro is not import-fed after binding'
+   print *, 'PASS: emission import bound for every anthro field'
+   call catchem_emis_copy_imports(cc_wrap%ext_emis%categories(anthro_idx), nz, rc)
+   if (rc /= CC_SUCCESS) error stop 'catchem_emis_copy_imports failed'
+   ino = cc_wrap%ext_emis%categories(anthro_idx)%find_field('NO')
+   if (ino <= 0) error stop 'anthro/NO is not a field of the anthro category'
+   if (any(shape(cc_wrap%ext_emis%categories(anthro_idx)%fields(ino)%emission_data) /= (/nx, ny, nz, 1/))) &
+      error stop 'emission_data of an import-fed category is not (nx, ny, nz, 1)'
+   if (.not. exact_equal(cc_wrap%ext_emis%categories(anthro_idx)%fields(ino)%emission_data(1, 1, 1, 1), 2.0e-10_fp)) &
+      error stop 'emission_data(1,1,1,1) is not level 1 of the import'
+   if (.not. exact_equal(cc_wrap%ext_emis%categories(anthro_idx)%fields(ino)%emission_data(1, 1, 2, 1), 0.0_fp)) &
+      error stop 'emission_data above level 1 is not zero for a 2-D category'
+   print *, 'PASS: emission import copied into emission_data (level 1 of the import, zero above, shape nx x ny x nz x 1)'
 
    ! 4. Drive the production transform — the exact ursa run-phase path
    call ESMF_TimeSet(currTime, yy=2021, mm=3, dd=22, h=6, rc=rc)

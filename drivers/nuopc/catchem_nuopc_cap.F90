@@ -46,6 +46,7 @@ module cc_nuopc
       SetVM, &
       modelSS        => SetServices, &
       model_label_Advertise       => label_Advertise,      &
+      model_label_RealizeAccepted => label_RealizeAccepted, &
       model_label_SetClock        => label_SetClock,       &
       model_label_DataInitialize  => label_DataInitialize, &
       model_label_Advance => label_Advance, &
@@ -147,6 +148,11 @@ contains
       !Note NUOPC_CompSetEntryPoint is deprecated for newer version of ESMF
       call NUOPC_CompSpecialize(model, specLabel=model_label_Advertise, &
          specRoutine=InitializeP1, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+
+      call NUOPC_CompSpecialize(model, specLabel=model_label_RealizeAccepted, &
+         specRoutine=RealizeAccepted, rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__, file=__FILE__)) return
 
@@ -446,6 +452,7 @@ contains
       integer, dimension(2) :: lb, ub
       logical :: has_tracer_array
       logical :: has_import_fields
+      type(CATChem_InternalState) :: is
 
       rc = ESMF_SUCCESS
       has_tracer_array = .false.
@@ -571,6 +578,16 @@ contains
             startTime=startTime, stopTime=stopTime, timeStep=timeStep, clock=clock, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return  ! bail out
+         ! Emission imports (mapping entries extemis/<category>/<variable>) that a provider connected replace
+         ! the file readers of their category. The connector completed the reference-shared fields before this
+         ! phase (IPDv05p6b); the unconnected ones were removed in RealizeAccepted.
+         nullify(is%wrap)
+         call ESMF_GridCompGetInternalState(model, is, rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return  ! bail out
+         call catchem_emis_bind_imports(is%wrap, importState, rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg="CATChem: binding the emission imports failed", &
+            line=__LINE__, file=__FILE__)) return  ! bail out
       else if (has_import_fields) then
          ! -- Coupled but misconfigured: import fields exist yet none carried the
          !    rank-4 tracer array we rely on. Preserve the original hard error.
@@ -608,6 +625,50 @@ contains
          line=__LINE__, file=__FILE__)) return  ! bail out
 
    end subroutine InitializeP2
+
+   !> \brief RealizeAccepted: remove the optional imports no provider connected
+   !!
+   !! NUOPC's generic IPDvXp07 stops a model whose import state still holds an unconnected field ("NUOPC
+   !! INCOMPATIBILITY DETECTED: Import Fields not all connected", NUOPC_ModelBase.F90), whatever the model
+   !! considers optional. This phase runs after the connectors settled connectivity and right before that
+   !! check, so an optional, advertised entry (the emission imports extemis/<category>/<variable> and the
+   !! optional met inputs) that nobody provides is removed here; the run-time import loop already treats an
+   !! absent optional field as "not provided".
+   subroutine RealizeAccepted(model, rc)
+      type(ESMF_GridComp)  :: model
+      integer, intent(out) :: rc
+
+      type(ESMF_State) :: importState
+      integer :: i, n_removed, localrc
+      logical :: connected
+      character(len=NUOPC_PATH_LEN) :: msg
+
+      rc = ESMF_SUCCESS
+      n_removed = 0
+      call NUOPC_ModelGet(model, importState=importState, rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__)) return
+      if (.not. allocated(field_config%import_fields)) return
+      do i = 1, size(field_config%import_fields)
+         if (.not. (field_config%import_fields(i)%optional .and. field_config%import_fields(i)%advertise)) cycle
+         connected = NUOPC_IsConnected(importState, fieldName=trim(field_config%import_fields(i)%standard_name), rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         if (connected) cycle
+         call ESMF_StateRemove(importState, (/trim(field_config%import_fields(i)%standard_name)/), rc=rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return
+         n_removed = n_removed + 1
+         call ESMF_LogWrite('CATChem: optional import '//trim(field_config%import_fields(i)%standard_name)// &
+            ' not connected, removed', ESMF_LOGMSG_INFO, rc=localrc)
+         if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+      end do
+      write(msg, '(A,I0,A)') 'CATChem: RealizeAccepted removed ', n_removed, ' unconnected optional import(s)'
+      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_INFO, rc=localrc)
+      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+   end subroutine RealizeAccepted
 
    !> \brief Model advance routine - Execute one time step of chemistry calculations
    !!

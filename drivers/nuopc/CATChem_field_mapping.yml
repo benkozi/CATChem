@@ -240,6 +240,152 @@ import_fields:
     units: "1"
     optional: false
 
+  # External-emission inputs (task 5 of ufs-chem-coupling-protos): one entry per gridded category and file
+  # variable of the prototype manifest. catchem_var is the path extemis/<category>/<variable>; the cap binds a
+  # connected import to that field of processes/extemis/<category> and reads it every step in place of the
+  # file readers. Every export is rank 3 on the model levels (one CECE instance has one nz): a surface
+  # category carries its flux in level 1. Unconnected entries are removed in RealizeAccepted. point has none.
+  - standard_name: "extemis_anthro_NO"
+    catchem_var: "extemis/anthro/NO"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_SO2"
+    catchem_var: "extemis/anthro/SO2"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_POC"
+    catchem_var: "extemis/anthro/POC"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_TERP"
+    catchem_var: "extemis/anthro/TERP"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_ISOP"
+    catchem_var: "extemis/anthro/ISOP"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_PEC"
+    catchem_var: "extemis/anthro/PEC"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_anthro_PSO4"
+    catchem_var: "extemis/anthro/PSO4"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_fire_NO"
+    catchem_var: "extemis/fire/NO"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_fire_SO2"
+    catchem_var: "extemis/fire/SO2"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_fire_CO"
+    catchem_var: "extemis/fire/CO"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "kg m-2 s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_fire_FRP"
+    catchem_var: "extemis/fire/FRP"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "MW"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_gmi_oh"
+    catchem_var: "extemis/gmi/oh"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "cm-3"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_gmi_h2o2"
+    catchem_var: "extemis/gmi/h2o2"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "mol mol-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_gmi_no3"
+    catchem_var: "extemis/gmi/no3"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "mol mol-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_dms_dms"
+    catchem_var: "extemis/dms/dms"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "nmol L-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_dust_clayfrac"
+    catchem_var: "extemis/dust/clayfrac"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_dust_sandfrac"
+    catchem_var: "extemis/dust/sandfrac"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_dust_sep"
+    catchem_var: "extemis/dust/sep"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_dust_uthres"
+    catchem_var: "extemis/dust/uthres"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "m s-1"
+    optional: true
+    advertise: true
+  - standard_name: "extemis_fengsha_albedo_drag"
+    catchem_var: "extemis/fengsha/albedo_drag"
+    dimensions: 3
+    vertical_axis: "level"
+    units: "1"
+    optional: true
+    advertise: true
+
 export_fields:
   - standard_name: "inst_tracer_mass_frac"
     catchem_var: "chem"
