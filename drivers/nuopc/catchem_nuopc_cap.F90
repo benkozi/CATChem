@@ -449,6 +449,8 @@ contains
       real(ESMF_KIND_R8) :: convert_unit
       integer :: localPet, petCount
       integer :: item, coord_item, rank, localDeCount, numLevels, localDe, localrc
+      character(len=ESMF_MAXSTR) :: field_name
+      character(len=NUOPC_PATH_LEN) :: msg
       integer, dimension(2) :: lb, ub
       logical :: has_tracer_array
       logical :: has_import_fields
@@ -495,13 +497,17 @@ contains
          has_import_fields = size(fieldList) > 0
          do item = 1, size(fieldList)
 
-            call ESMF_FieldGet(fieldList(item), rank=rank, localDeCount=localDeCount, rc=rc)
+            call ESMF_FieldGet(fieldList(item), rank=rank, localDeCount=localDeCount, name=field_name, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
                line=__LINE__, file=__FILE__)) return
-            ! -- validate field data decomposition
+            ! -- validate field data decomposition: the cap reads one DE's coordinates and data per PET, so a
+            !    PET holding several DEs would silently run on the last one; stop instead.
             if (localDeCount /= 1) then
-               call ESMF_LogSetError(ESMF_RC_INTNRL_BAD, msg="localDeCount must be 1", &
+               write(msg, '(A,A,A,I0,A)') 'CATChem: import field ', trim(field_name), ' has ', localDeCount, &
+                  ' DEs on this PET; CATChem needs one DE per PET (localDeCount must be 1)'
+               call ESMF_LogSetError(ESMF_RC_INTNRL_BAD, msg=trim(msg), &
                   line=__LINE__, file=__FILE__, rcToReturn=rc)
+               return  ! bail out
             end if
 
             if (rank == 4) then !use tracer array to get domain

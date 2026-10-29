@@ -18,6 +18,9 @@ module dataatm_services
       NUOPC_ModelGet
    use catchem_nuopc_interface, only: load_field_config, field_config
    implicit none
+   !> DEs of the shared grid on this PET: 1 normally, 2 for the multi_de failure case (the driver decomposes
+   !! the grid accordingly and the mock fields stay unfilled, since CATChem must stop before reading them).
+   integer, save :: data_grid_des = 1
 contains
    subroutine SetServices(model, rc)
       type(ESMF_GridComp) :: model
@@ -129,6 +132,7 @@ contains
       integer :: k, rank
 
       rc = ESMF_SUCCESS
+      if (data_grid_des /= 1) return
       call ESMF_FieldGet(field, name=field_name, rank=rank, rc=rc)
       if (rc /= ESMF_SUCCESS) return
       select case (rank)
@@ -277,7 +281,7 @@ module contract_driver_services
       label_SetModelServices, NUOPC_DriverAddComp
    use NUOPC_Connector, only: connectorSS => SetServices
    use cc_nuopc, only: CATChem_SetServices => SetServices
-   use dataatm_services, only: DataATM_SetServices => SetServices
+   use dataatm_services, only: DataATM_SetServices => SetServices, data_grid_des
    implicit none
    logical, save :: model_services_called = .false.
 contains
@@ -313,7 +317,7 @@ contains
       call NUOPC_DriverAddComp(driver, "DataATM", &
          compSetServicesRoutine=DataATM_SetServices, comp=dataatm, rc=rc)
       if (rc /= ESMF_SUCCESS) return
-      data_grid = ESMF_GridCreateNoPeriDim(maxIndex=(/4, 2/), rc=rc)
+      data_grid = ESMF_GridCreateNoPeriDim(maxIndex=(/4, 2/), regDecomp=(/data_grid_des, 1/), rc=rc)
       if (rc /= ESMF_SUCCESS) return
       call ESMF_GridAddCoord(data_grid, staggerLoc=ESMF_STAGGERLOC_CENTER, rc=rc)
       if (rc /= ESMF_SUCCESS) return
@@ -349,6 +353,7 @@ program nuopc_contract_harness
    use ESMF
    use contract_driver_services, only: ContractDriver_SetServices => SetServices, &
       driver_services_seen
+   use dataatm_services, only: data_grid_des
    use catchem_nuopc_interface, only: load_field_config, transform_nuopc_to_catchem, &
       transform_catchem_to_nuopc, field_config, cc_wrap_type, update_pm_diagnostics, &
       catchem_emis_bind_imports
@@ -431,6 +436,32 @@ program nuopc_contract_harness
    character(len=128) :: exchange_tracer_names(ntr), exchange_tracer_units(ntr)
    character(len=64), parameter :: parity_expected(3) = [character(len=64) :: &
       'unfamiliar_alpha', 'unfamiliar_beta', 'unfamiliar_gamma']
+
+   ! The failure case `nuopc_contract_harness multi_de`: the shared grid with two DEs on this PET. CATChem's
+   ! InitializeP2 must stop with a named error (one DE per PET), not run on the last DE's coordinates.
+   block
+      character(len=32) :: mode
+      call get_command_argument(1, mode)
+      if (trim(mode) == 'multi_de') then
+         data_grid_des = 2
+         call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
+            defaultlogfilename="nuopc_contract_multi_de.log", rc=rc)
+         call check(rc, "ESMF_Initialize")
+         driver_comp = ESMF_GridCompCreate(name="contract_driver", rc=rc)
+         call check(rc, "GridCompCreate driver")
+         call ESMF_GridCompSetServices(driver_comp, ContractDriver_SetServices, rc=rc)
+         call check(rc, "GridCompSetServices driver")
+         call ESMF_GridCompInitialize(driver_comp, userRc=urc, rc=rc)
+         if (rc == ESMF_SUCCESS .and. urc == ESMF_SUCCESS) &
+            error stop 'FAIL: CATChem initialized on a PET with two DEs'
+         call ESMF_LogFlush(rc=rc)
+         if (.not. log_has('PET0.nuopc_contract_multi_de.log', 'CATChem needs one DE per PET')) &
+            error stop 'FAIL: no "CATChem needs one DE per PET" error in PET0.nuopc_contract_multi_de.log'
+         print *, 'PASS: CATChem stops initialization on a PET with two DEs'
+         call ESMF_Finalize(rc=rc)
+         stop
+      end if
+   end block
 
    call ESMF_Initialize(defaultCalKind=ESMF_CALKIND_GREGORIAN, &
       defaultlogfilename="test_nuopc_transform.log", rc=rc)
@@ -896,6 +927,24 @@ contains
          value(j:j) = c_value(j)
       end do
    end subroutine parity_from_c
+
+   logical function log_has(path, text)
+      character(len=*), intent(in) :: path, text
+      character(len=4096) :: line
+      integer :: unit, ios
+      log_has = .false.
+      open(newunit=unit, file=path, status='old', action='read', iostat=ios)
+      if (ios /= 0) return
+      do
+         read(unit, '(A)', iostat=ios) line
+         if (ios /= 0) exit
+         if (index(line, text) > 0) then
+            log_has = .true.
+            exit
+         end if
+      end do
+      close(unit)
+   end function log_has
 
    subroutine check(rc_in, what)
       integer, intent(in) :: rc_in

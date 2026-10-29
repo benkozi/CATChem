@@ -906,6 +906,14 @@ if(CATCHEM_BUILD_NUOPC)
   # test run waiting indefinitely in a NUOPC phase.
   set_tests_properties(nuopc_contract_valid PROPERTIES TIMEOUT 30)
   catchem_label_tests("integration;contract;boundary" nuopc_contract_valid)
+  # The failure case of the cap's one-DE-per-PET rule: the harness's shared grid with two DEs on one PET.
+  add_test(
+    NAME nuopc_contract_multi_de_fails
+    COMMAND nuopc_contract_harness multi_de
+    WORKING_DIRECTORY ${NUOPC_CONTRACT_RUN_DIR}
+  )
+  set_tests_properties(nuopc_contract_multi_de_fails PROPERTIES TIMEOUT 30)
+  catchem_label_tests("integration;contract;boundary" nuopc_contract_multi_de_fails)
 
   # Feature 013: generic process-diagnostic writer round-trip.  This links the
   # NUOPC cap directly (not the self-contained cc_nuopc archive) so the build
@@ -980,6 +988,8 @@ if(CATCHEM_BUILD_NUOPC)
     import_point_active
     import_nongridded_active
     import_point_inactive
+    file_missing_time_coord
+    file_point_daily
   )
     add_test(
       NAME nuopc_emis_source_${_case}

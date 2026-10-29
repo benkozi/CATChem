@@ -3425,12 +3425,19 @@ contains
       ! For non-template static-path files, pre-load time coordinates so that
       ! find_time_index can determine the correct initial irec even when the file
       ! contains more time slices than the arithmetic assumption (e.g. 14-month files).
+      ! A point category's source is an ASCII .rc table with no time coordinate
+      ! (catchem_emis_read_points resolves it per read), so it is not probed. A failed
+      ! read stops init instead of leaving the first update to fail on the same file.
       if (trim(category%frequency) /= 'static' .and. &
+         .not. is_point_category(category) .and. &
          index(trim(category%source_file), '%') == 0 .and. &
          .not. is_null_filename(category%source_file) .and. &
          category%n_times == 0) then
          call catchem_emis_read_time_coord(trim(category%source_file), category, localrc)
-         ! Non-fatal: if time coord read fails, fall through to arithmetic below
+         if (localrc /= CC_SUCCESS) then
+            rc = CC_FAILURE
+            return
+         end if
          category%last_resolved_file = trim(category%source_file)
       end if
 

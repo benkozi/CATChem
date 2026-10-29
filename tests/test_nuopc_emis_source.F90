@@ -12,6 +12,10 @@
 !!   import_point_active       an active volcano category under nuopc_import fails setup by name
 !!   import_nongridded_active  an active gridded: false category under nuopc_import fails setup by name
 !!   import_point_inactive     an inactive volcano category under nuopc_import is accepted
+!!   file_missing_time_coord   source: file, a non-static category whose source_file is missing: the init-time
+!!                             time-coordinate read fails init by name (its error used to be ignored)
+!!   file_point_daily          source: file, a daily volcano category on a plain .rc table: init succeeds and
+!!                             no time coordinate is read from the table (it has none)
 program test_nuopc_emis_source
    use iso_c_binding, only: c_double, c_int, c_ptr
    use ESMF
@@ -141,6 +145,25 @@ program test_nuopc_emis_source
       call require('category nogrid is a point source')
       call require('point sources need source: file')
       print *, 'PASS: an active non-gridded category fails setup by name under source: nuopc_import'
+
+    case ('file_missing_time_coord')
+      call init_model('file_missing_time_coord.yml')
+      call catchem_emis_init(ext, model%cpp_core_ptr, nx, ny, nz, clock, rc)
+      if (rc == CC_SUCCESS) error stop 'FAIL: a missing time-coordinate file was ignored at init'
+      call flush_log()
+      call require('File not found for time coord: missing_grid_emis.nc')
+      call require('Failed timing setup for category: surf')
+      print *, 'PASS: a missing time-coordinate file fails init by name under source: file'
+
+    case ('file_point_daily')
+      call write_inputs()
+      call init_model('file_point_daily.yml')
+      call catchem_emis_init(ext, model%cpp_core_ptr, nx, ny, nz, clock, rc)
+      if (rc /= CC_SUCCESS) error stop 'FAIL: a daily volcano category on a plain .rc table failed init'
+      call flush_log()
+      call forbid('reader=time_coord path=points.rc')
+      call forbid(aqmio_read_line//'path=points.rc')
+      print *, 'PASS: no time coordinate is read from a point table'
 
     case ('import_point_inactive')
       call init_model('import.yml')
