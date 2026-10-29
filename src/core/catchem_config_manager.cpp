@@ -950,6 +950,26 @@ namespace catchem {
             }
         }
 
+        // processes/extemis/source selects where every category's inputs come
+        // from: 'file' (CATChem's readers) or 'nuopc_import' (connected NUOPC
+        // imports only, no file opened).  A missing key keeps 'file', so
+        // existing configurations are unaffected; any other value fails loudly
+        // and lists the accepted ones.
+        auto validate_emission_source = [&](const YAML::Node& processes_node, const std::string& prefix) {
+            if (!processes_node || !processes_node.IsMap())
+                return;
+            const YAML::Node extemis = processes_node["extemis"];
+            if (!extemis || !extemis.IsMap() || !extemis["source"])
+                return;
+            const YAML::Node source = extemis["source"];
+            const std::string value = source.IsScalar() ? source.as<std::string>() : std::string("<not a scalar>");
+            if (value != "file" && value != "nuopc_import")
+                add("emissions", prefix + "/extemis/source", "unknown source value: " + value,
+                    "use one of: file, nuopc_import");
+        };
+        validate_emission_source(root_node_["processes"], "processes");
+        validate_emission_source(root_node_["process"], "process");
+
         // simulation/verbose/watch_species names must exist in the loaded
         // mechanism; a typo would otherwise log nothing and say nothing.
         if (!data.simulation.watch_species.empty() && !data.species.empty()) {

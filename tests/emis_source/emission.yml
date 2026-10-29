@@ -1,0 +1,26 @@
+# Emission map of the extemis source tests (test_nuopc_emis_source.F90): two
+# gridded categories, one point category and one non-gridded NetCDF category.
+surf:
+  NO:
+    long_name: "Nitrogen Oxide"
+    units: "kg/m2/s"
+    scale: [1.0]
+    map: ["no3"]
+clim:
+  SO2:
+    long_name: "Sulfur Dioxide"
+    units: "kg/m2/s"
+    scale: [1.0]
+    map: ["so2"]
+volcanic:
+  SO2:
+    long_name: "Volcanic Sulfur Dioxide"
+    units: "kg/m2/s"
+    scale: [1.0]
+    map: ["so2"]
+nogrid:
+  SO2:
+    long_name: "Sulfur Dioxide on a non-gridded file"
+    units: "kg/m2/s"
+    scale: [1.0]
+    map: ["so2"]

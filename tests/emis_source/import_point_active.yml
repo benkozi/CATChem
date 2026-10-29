@@ -1,0 +1,73 @@
+# extemis source test configuration (import_point_active): see test_nuopc_emis_source.F90.
+simulation:
+  name: emis_source_import_point_active
+  start_date: 20210322 0600
+  end_date: 20210322 0620
+  species_filename: CATChem_species.yml
+  emission_filename: emission.yml
+  verbose:
+    activate: false
+
+grid:
+  number_of_levels: 5
+
+timesteps:
+  transport_timestep_in_s: 600
+  chemistry_timestep_in_s: 600
+
+diagnostics:
+  output:
+    enabled: false
+  collection:
+    enabled: false
+
+run_phases:
+  emis_source:
+    description: A self-contained sea-salt step; the test drives the emission module directly.
+    processes: [seasalt]
+
+processes:
+  seasalt:
+    activate: true
+    diagnostics: false
+    scheme: geos12
+  extemis:
+    activate: true
+    global_diagnostics: false
+    source: nuopc_import
+    surf:
+      activate: true
+      source_file: "/nonexistent/emis_source/surf.nc"
+      scale_factor: 1.0
+      format: "netcdf"
+      gridded: true
+      is_2d: true
+      frequency: "hourly"
+      regrid_method: bilinear
+      lat_name: lat
+      lon_name: lon
+      time_interpolation: none
+      apply_method: add
+      vertical_dist: none
+      reverse_vertical: false
+      diagnostics: false
+    volcanic:
+      activate: true
+      source_file: "/nonexistent/emis_source/points.rc"
+      scale_factor: 1.0
+      format: "volcano"
+      gridded: false
+      is_2d: false
+      frequency: "static"
+      regrid_method: none
+      lat_name: lat
+      lon_name: lon
+      time_interpolation: none
+      apply_method: add
+      vertical_dist: none
+      reverse_vertical: false
+      diagnostics: false
+    clim:
+      activate: false
+    nogrid:
+      activate: false

@@ -452,6 +452,9 @@ contains
             else
                call AQMIO_FileNameGet(fullName, fileName, filePath=filePath)
             end if
+            ! One DEBUG line per open, whatever the mode, so a PET log shows every file aqmio reads or writes.
+            call ESMF_LogWrite('AQMIO: open iomode='//trim(merge('create', fmode, create))//' path='// &
+               trim(fullName), ESMF_LOGMSG_DEBUG, rc=localrc)
             if      (liofmt == AQMIO_FMT_NETCDF) then
 #if HAVE_NETCDF
                if (create) then
@@ -3680,6 +3683,7 @@ contains
       end if
 
       ! Create or open file
+      call ESMF_LogWrite('AQMIO: open iomode=write1d path='//trim(filename), ESMF_LOGMSG_DEBUG, rc=localrc)
       if (.not. file_exists) then
          localrc = nf90_create(trim(filename), ior(NF90_CLOBBER, NF90_NETCDF4), ncid)
       else
@@ -3837,6 +3841,7 @@ contains
          end if
       end if
 
+      call ESMF_LogWrite('AQMIO: open iomode=write1d path='//trim(filename), ESMF_LOGMSG_DEBUG, rc=localrc)
       localrc = nf90_open(trim(filename), NF90_WRITE, ncid)
       if (localrc /= NF90_NOERR) then
          call ESMF_LogSetError(ESMF_RC_FILE_OPEN, &
@@ -3952,7 +3957,8 @@ contains
          return
       end if
 
-      ! Open file for reading
+      ! Open file for reading (the diagnostic writer's append path, never an emission input)
+      call ESMF_LogWrite('AQMIO: open iomode=read1d path='//trim(filename), ESMF_LOGMSG_DEBUG, rc=localrc)
       localrc = nf90_open(trim(filename), NF90_NOWRITE, ncid)
       if (localrc /= NF90_NOERR) then
          if (present(rc)) rc = ESMF_FAILURE
@@ -4061,6 +4067,7 @@ contains
       end if
 
       ! Open file read-only
+      call ESMF_LogWrite('AQMIO: open iomode=read path='//trim(filename), ESMF_LOGMSG_DEBUG, rc=localrc)
       localrc = nf90_open(trim(filename), NF90_NOWRITE, ncid)
       if (localrc /= NF90_NOERR) then
          call ESMF_LogSetError(ESMF_RC_FILE_OPEN, &

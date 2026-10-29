@@ -55,6 +55,7 @@ module catchem_nuopc_emis_mod
    public :: catchem_emis_bind_import
    public :: catchem_emis_finish_binding
    public :: catchem_emis_copy_imports
+   public :: catchem_emis_read  ! the file-path reader of one category (source: file); tests drive it directly
    public :: catchem_emis_finalize
    public :: catchem_emis_write_diagnostics
    public :: catchem_map_points_to_grid
@@ -264,7 +265,7 @@ contains
       ! Local variables
       integer :: localrc, icat, n_categories, active_category_index
       logical :: extemis_activate, category_active
-      character(len=EMIS_MAXSTR) :: msg, category_name
+      character(len=EMIS_MAXSTR) :: msg, category_name, c_buf
       character(len=*), parameter :: pName = 'catchem_emis_init'
 
       ! Initialize
@@ -298,6 +299,29 @@ contains
       end if
 
       ext_emis_data%diagnostic = (catchem_config_get_yaml_bool(core_ptr, 'processes/extemis/global_diagnostics' // c_null_char, 1_c_int) /= 0)
+
+      ! processes/extemis/source: 'file' (the readers; the default when absent) or 'nuopc_import' (every active
+      ! category from connected NUOPC imports, no file opened). ConfigManager::validate() rejects any other
+      ! value before this point; the check here keeps the module safe when driven without it.
+      call catchem_config_get_yaml_string(core_ptr, 'processes/extemis/source' // c_null_char, c_buf, &
+         int(len(c_buf), c_int), '' // c_null_char)
+      call clean_c_string(c_buf)
+      if (len_trim(c_buf) == 0) then
+         call catchem_config_get_yaml_string(core_ptr, 'process/extemis/source' // c_null_char, c_buf, &
+            int(len(c_buf), c_int), 'file' // c_null_char)
+         call clean_c_string(c_buf)
+      end if
+      if (trim(c_buf) /= 'file' .and. trim(c_buf) /= 'nuopc_import') then
+         write(msg, '(A,A,A,A)') trim(pName), ': processes/extemis/source: unknown source value: ', trim(c_buf), &
+            '; use one of: file, nuopc_import'
+         call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_ERROR, rc=localrc)
+         rc = CC_FAILURE
+         return
+      end if
+      ext_emis_data%source = trim(c_buf)
+      call ESMF_LogWrite(trim(pName)//': extemis source='//trim(ext_emis_data%source), ESMF_LOGMSG_INFO, rc=localrc)
+      if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+         line=__LINE__, file=__FILE__, rcToReturn=rc)) return
 
       if (extemis_activate) then
          ! Check if emission mapping is loaded in C++ ConfigManager
@@ -334,6 +358,16 @@ contains
                   end if
 
                   active_category_index = ext_emis_data%n_categories
+                  if (trim(ext_emis_data%source) == 'nuopc_import') then
+                     ! Imports only: a point or non-gridded category has no NUOPC import path, and the timing
+                     ! setup is the init-time file open (AQMIO_ReadTimeCoord), so neither happens here.
+                     call catchem_emis_require_gridded(ext_emis_data%categories(active_category_index), localrc)
+                     if (localrc /= CC_SUCCESS) then
+                        rc = CC_FAILURE
+                        return
+                     end if
+                     cycle
+                  end if
                   call catchem_emis_setup_timing(ext_emis_data%categories(active_category_index), clock, localrc)
                   if (localrc /= CC_SUCCESS) then
                      write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed timing setup for category: ', trim(category_name)
@@ -413,102 +447,109 @@ contains
                rc = CC_FAILURE
                return
             end if
+         else if (trim(ext_emis_data%source) == 'nuopc_import') then
+            ! catchem_emis_finish_binding guarantees every active category is import-fed; never fall back to a file.
+            write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: category is not import-fed under source nuopc_import: ', &
+               trim(ext_emis_data%categories(i)%category_name)
+            call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+            rc = CC_FAILURE
+            return
          else
 
-         ! Determine the current calendar period key for this category's frequency.
-         call catchem_emis_period_key(ext_emis_data%categories(i)%frequency, &
-            current_time, period_key, localrc)
-         if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-
-         ! For a single multi-record monthly climatology with linear time
-         ! interpolation, the interpolation bracket changes at mid-month (not at
-         ! the month start), so re-read the two bracketing slices at mid-month.
-         ! With monthly_anchor=='file' the bracket follows the file's record
-         ! timestamps (MAPL ExtData match); key on the lower record's month.
-         if (trim(ext_emis_data%categories(i)%frequency) == 'monthly' .and. &
-            trim(ext_emis_data%categories(i)%time_interpolation) == 'linear' .and. &
-            ext_emis_data%categories(i)%n_times >= 2) then
-            if (trim(ext_emis_data%categories(i)%monthly_anchor) == 'file') then
-               call emis_file_time_bracket(ext_emis_data%categories(i), current_time, blo_month, bfrac, localrc)
-               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-               call ESMF_TimeGet(current_time, yy=blo_year, rc=localrc)
-               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-               period_key = blo_year*100 + blo_month
-            else
-               call catchem_emis_month_bracket(current_time, blo_year, blo_month, bfrac, localrc)
-               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-               period_key = blo_year*100 + blo_month
-            end if
-         end if
-
-         ! Daily-mean files interpolated linearly are valid at 12Z, so the bracket of two
-         ! consecutive-day 12Z knots changes at noon.  Key on the lower knot's day
-         ! (= date of curr_time - 12h) so the re-read fires at 12Z, not midnight.
-         ! With daily_hold (MAPL ExtData refresh-cadence match), the [D-1,D] bracket
-         ! is held for the whole day and refreshed at 00Z, so key on curr_time's date.
-         if (trim(ext_emis_data%categories(i)%frequency) == 'daily' .and. &
-            trim(ext_emis_data%categories(i)%time_interpolation) == 'linear') then
-            if (ext_emis_data%categories(i)%daily_hold) then
-               call ESMF_TimeGet(current_time, yy=lo_yy, mm=lo_mm, dd=lo_dd, rc=localrc)
-            else
-               call ESMF_TimeIntervalSet(half_day, h=12, rc=localrc)
-               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-               call ESMF_TimeGet(current_time - half_day, yy=lo_yy, mm=lo_mm, dd=lo_dd, rc=localrc)
-            end if
-            if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-               line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
-            period_key = lo_yy*10000 + lo_mm*100 + lo_dd
-         end if
-
-         if (period_key /= ext_emis_data%categories(i)%last_period_key) then
-
-            call ESMF_TimeGet(current_time, timeString=timeString, rc=localrc)
+            ! Determine the current calendar period key for this category's frequency.
+            call catchem_emis_period_key(ext_emis_data%categories(i)%frequency, &
+               current_time, period_key, localrc)
             if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
                line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
 
-            call ESMF_LogWrite(trim(pName)//': reading emission for '// &
-               trim(ext_emis_data%categories(i)%category_name)// &
-               " @ "//trim(timeString), ESMF_LOGMSG_DEBUG, rc=localrc)
-            if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-               line=__LINE__, file=__FILE__, rcToReturn=rc)) return
-
-            if (ext_emis_data%categories(i)%n_times == 0 .and. &
-               index(trim(ext_emis_data%categories(i)%source_file), '%') == 0) then
-               ext_emis_data%categories(i)%irec = ext_emis_data%categories(i)%irec + 1
+            ! For a single multi-record monthly climatology with linear time
+            ! interpolation, the interpolation bracket changes at mid-month (not at
+            ! the month start), so re-read the two bracketing slices at mid-month.
+            ! With monthly_anchor=='file' the bracket follows the file's record
+            ! timestamps (MAPL ExtData match); key on the lower record's month.
+            if (trim(ext_emis_data%categories(i)%frequency) == 'monthly' .and. &
+               trim(ext_emis_data%categories(i)%time_interpolation) == 'linear' .and. &
+               ext_emis_data%categories(i)%n_times >= 2) then
+               if (trim(ext_emis_data%categories(i)%monthly_anchor) == 'file') then
+                  call emis_file_time_bracket(ext_emis_data%categories(i), current_time, blo_month, bfrac, localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+                  call ESMF_TimeGet(current_time, yy=blo_year, rc=localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+                  period_key = blo_year*100 + blo_month
+               else
+                  call catchem_emis_month_bracket(current_time, blo_year, blo_month, bfrac, localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+                  period_key = blo_year*100 + blo_month
+               end if
             end if
 
-            call catchem_emis_read(ext_emis_data%categories(i), ext_emis_data%regrid_cache, IO, grid, &
-               nlev, current_time, localrc)
-            if (localrc /= CC_SUCCESS) then
-               write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to read data for category: ', &
-                  trim(ext_emis_data%categories(i)%category_name)
-               call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+            ! Daily-mean files interpolated linearly are valid at 12Z, so the bracket of two
+            ! consecutive-day 12Z knots changes at noon.  Key on the lower knot's day
+            ! (= date of curr_time - 12h) so the re-read fires at 12Z, not midnight.
+            ! With daily_hold (MAPL ExtData refresh-cadence match), the [D-1,D] bracket
+            ! is held for the whole day and refreshed at 00Z, so key on curr_time's date.
+            if (trim(ext_emis_data%categories(i)%frequency) == 'daily' .and. &
+               trim(ext_emis_data%categories(i)%time_interpolation) == 'linear') then
+               if (ext_emis_data%categories(i)%daily_hold) then
+                  call ESMF_TimeGet(current_time, yy=lo_yy, mm=lo_mm, dd=lo_dd, rc=localrc)
+               else
+                  call ESMF_TimeIntervalSet(half_day, h=12, rc=localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+                  call ESMF_TimeGet(current_time - half_day, yy=lo_yy, mm=lo_mm, dd=lo_dd, rc=localrc)
+               end if
+               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+               period_key = lo_yy*10000 + lo_mm*100 + lo_dd
+            end if
+
+            if (period_key /= ext_emis_data%categories(i)%last_period_key) then
+
+               call ESMF_TimeGet(current_time, timeString=timeString, rc=localrc)
+               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                  line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return
+
+               call ESMF_LogWrite(trim(pName)//': reading emission for '// &
+                  trim(ext_emis_data%categories(i)%category_name)// &
+                  " @ "//trim(timeString), ESMF_LOGMSG_DEBUG, rc=localrc)
                if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
                   line=__LINE__, file=__FILE__, rcToReturn=rc)) return
-               rc = CC_FAILURE
-               return
+
+               if (ext_emis_data%categories(i)%n_times == 0 .and. &
+                  index(trim(ext_emis_data%categories(i)%source_file), '%') == 0) then
+                  ext_emis_data%categories(i)%irec = ext_emis_data%categories(i)%irec + 1
+               end if
+
+               call catchem_emis_read(ext_emis_data%categories(i), ext_emis_data%regrid_cache, IO, grid, &
+                  nlev, current_time, localrc)
+               if (localrc /= CC_SUCCESS) then
+                  write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to read data for category: ', &
+                     trim(ext_emis_data%categories(i)%category_name)
+                  call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+                  rc = CC_FAILURE
+                  return
+               end if
+
+               ext_emis_data%categories(i)%last_period_key = period_key
             end if
 
-            ext_emis_data%categories(i)%last_period_key = period_key
-         end if
-
-         if (ext_emis_data%categories(i)%needs_time_blend) then
-            call catchem_emis_blend_time(ext_emis_data%categories(i), current_time, localrc)
-            if (localrc /= CC_SUCCESS) then
-               write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to blend time for category: ', &
-                  trim(ext_emis_data%categories(i)%category_name)
-               call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
-               if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
-                  line=__LINE__, file=__FILE__, rcToReturn=rc)) return
-               rc = CC_FAILURE
-               return
+            if (ext_emis_data%categories(i)%needs_time_blend) then
+               call catchem_emis_blend_time(ext_emis_data%categories(i), current_time, localrc)
+               if (localrc /= CC_SUCCESS) then
+                  write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed to blend time for category: ', &
+                     trim(ext_emis_data%categories(i)%category_name)
+                  call ESMF_LogWrite(msg, ESMF_LOGMSG_ERROR, rc=localrc)
+                  if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
+                     line=__LINE__, file=__FILE__, rcToReturn=rc)) return
+                  rc = CC_FAILURE
+                  return
+               end if
             end if
-         end if
 
          end if ! from_import
 
@@ -630,6 +671,20 @@ contains
          do j = 1, ext_emis_data%categories(i)%n_fields
             if (ext_emis_data%categories(i)%fields(j)%from_import) n_bound = n_bound + 1
          end do
+         if (trim(ext_emis_data%source) == 'nuopc_import' .and. n_bound /= ext_emis_data%categories(i)%n_fields) then
+            ! Imports only: every field of every active category must be connected; a source_file is never a fallback.
+            do j = 1, ext_emis_data%categories(i)%n_fields
+               if (ext_emis_data%categories(i)%fields(j)%from_import) cycle
+               write(msg, '(A,A,A,A,A,A,A)') 'CATChem: extemis source nuopc_import: category ', &
+                  trim(ext_emis_data%categories(i)%category_name), ' has no connected import extemis_', &
+                  trim(ext_emis_data%categories(i)%category_name), '_', &
+                  trim(ext_emis_data%categories(i)%fields(j)%field_name), ' (no file fallback)'
+               call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_ERROR, rc=localrc)
+               exit
+            end do
+            rc = CC_FAILURE
+            return
+         end if
          if (n_bound == 0) cycle
          if (n_bound /= ext_emis_data%categories(i)%n_fields) then
             write(msg, '(A,A,A,I0,A,I0,A)') trim(pName), ': category ', trim(ext_emis_data%categories(i)%category_name), ': ', &
@@ -717,6 +772,7 @@ contains
          category%fields(ifield)%nlev_file = 1
       end do
 
+      call catchem_emis_log_open(category%category_name, 'rank_probe', filename)
       nc_status = nf90_open(trim(filename), NF90_NOWRITE, ncid)
       if (nc_status /= NF90_NOERR) return
 
@@ -910,6 +966,7 @@ contains
 
       !open file (Note: although AQMIO_Read can open file in its source code, it gives zeros for some reason.
       !           So we have to open it here first.)
+      call catchem_emis_log_open(category_name, 'tile', filename)
       call AQMIO_Open(IO, filename, iomode="read", iofmt=AQMIO_FMT_NETCDF, rc=localrc)
       if (ESMF_LogFoundError(rcToCheck=localrc, msg=ESMF_LOGERR_PASSTHRU, &
          line=__LINE__,  file=__FILE__,  rcToReturn=rc)) return  ! bail out
@@ -1159,6 +1216,7 @@ contains
             block
                integer :: nt2
                integer, allocatable :: d2a(:), s2a(:)
+               call catchem_emis_log_open(category_name, 'time_coord', filename_next)
                call AQMIO_ReadTimeCoord(trim(filename_next), nt2, d2a, s2a, rc=localrc)
                if (localrc == ESMF_SUCCESS .and. nt2 >= 1) then
                   category%bt2_date = d2a(1)
@@ -1197,6 +1255,7 @@ contains
                dstField  = esmf_field, &
                latname   = trim(category%latname), &
                lonname   = trim(category%lonname), &
+               category  = trim(category_name), &
                regrid_method_name = trim(category%regrid_method), &
                timeSlice = category%irec, &
                didRegrid = didRegrid, &
@@ -1238,6 +1297,7 @@ contains
                      dstField  = esmf_field, &
                      latname   = trim(category%latname), &
                      lonname   = trim(category%lonname), &
+                     category  = trim(category_name), &
                      regrid_method_name = trim(category%regrid_method), &
                      timeSlice = irec_next, &
                      didRegrid = didRegrid, &
@@ -1250,6 +1310,7 @@ contains
                      dstField  = esmf_field, &
                      latname   = trim(category%latname), &
                      lonname   = trim(category%lonname), &
+                     category  = trim(category_name), &
                      regrid_method_name = trim(category%regrid_method), &
                      timeSlice = irec_next, &
                      didRegrid = didRegrid, &
@@ -1290,6 +1351,7 @@ contains
                   dstField  = esmf_field, &
                   latname   = trim(category%latname), &
                   lonname   = trim(category%lonname), &
+                  category  = trim(category_name), &
                   regrid_method_name = trim(category%regrid_method), &
                   timeSlice = category%irec, &
                   levelSlice = klev, &
@@ -1330,6 +1392,7 @@ contains
                         dstField  = esmf_field, &
                         latname   = trim(category%latname), &
                         lonname   = trim(category%lonname), &
+                        category  = trim(category_name), &
                         regrid_method_name = trim(category%regrid_method), &
                         timeSlice = irec_next, &
                         levelSlice = klev, &
@@ -1343,6 +1406,7 @@ contains
                         dstField  = esmf_field, &
                         latname   = trim(category%latname), &
                         lonname   = trim(category%lonname), &
+                        category  = trim(category_name), &
                         regrid_method_name = trim(category%regrid_method), &
                         timeSlice = irec_next, &
                         levelSlice = klev, &
@@ -2191,6 +2255,37 @@ contains
          fmt == 'volcano_rc')
    end function is_point_category
 
+   !> \brief Log one emission input open, before it happens (ESMF_LOGMSG_DEBUG)
+   !!
+   !! One line per open, `CATChem: emission open category=<category> reader=<reader> path=<path>`, so a PET log
+   !! shows exactly which inventory files a run read (none under processes/extemis/source: nuopc_import).
+   subroutine catchem_emis_log_open(category_name, reader, path)
+      character(len=*), intent(in) :: category_name  !< Emission category
+      character(len=*), intent(in) :: reader         !< tile | regrid | time_coord | rank_probe | point_rc
+      character(len=*), intent(in) :: path           !< File about to be opened
+      integer :: localrc
+      call ESMF_LogWrite('CATChem: emission open category='//trim(category_name)//' reader='//trim(reader)// &
+         ' path='//trim(path), ESMF_LOGMSG_DEBUG, rc=localrc)
+   end subroutine catchem_emis_log_open
+
+   !> \brief Refuse a point or non-gridded category under processes/extemis/source: nuopc_import
+   !!
+   !! Point sources (format volcano | point | point_rc | volcano_rc, or gridded: false) have no NUOPC import
+   !! path; only their file reader can feed them.
+   subroutine catchem_emis_require_gridded(category, rc)
+      type(ExtEmisCategoryType), intent(in) :: category
+      integer, intent(out) :: rc
+      integer :: localrc
+      character(len=EMIS_MAXSTR) :: msg
+      rc = CC_SUCCESS
+      if (.not. is_point_category(category) .and. category%gridded) return
+      write(msg, '(A,A,A,A,A,L1,A)') 'catchem_emis_init: extemis source nuopc_import: category ', &
+         trim(category%category_name), ' is a point source (format=', trim(category%format), ', gridded=', &
+         category%gridded, '); point sources need source: file'
+      call ESMF_LogWrite(trim(msg), ESMF_LOGMSG_ERROR, rc=localrc)
+      rc = CC_FAILURE
+   end subroutine catchem_emis_require_gridded
+
    !> \brief Find the model layer (1..nz) whose edge interval contains altitude h
    !!
    !! Orientation-agnostic: each layer k spans [min(zedge(k),zedge(k+1)),
@@ -2272,6 +2367,7 @@ contains
       ! Block label to read inside the .rc file (GOCART convention: 'volcano')
       label = 'volcano'
 
+      call catchem_emis_log_open(category%category_name, 'point_rc', filename)
       open(newunit=iounit, file=trim(filename), status='old', action='read', iostat=ios)
       if (ios /= 0) then
          call ESMF_LogWrite(trim(pName)//': cannot open point file: '//trim(filename), &
@@ -3514,6 +3610,7 @@ contains
          return
       end if
 
+      call catchem_emis_log_open(category%category_name, 'time_coord', filename)
       call AQMIO_ReadTimeCoord(trim(filename), nt, dates, secs, rc=localrc)
       if (localrc /= ESMF_SUCCESS) then
          write(msg, '(A,A,A)') trim(pName), ': FATAL ERROR: Failed reading time coord from: ', trim(filename)

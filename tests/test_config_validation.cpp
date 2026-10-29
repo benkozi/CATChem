@@ -133,6 +133,27 @@ int main() {
     assert(file_anchor.data.emission_categories.at("anthro1").daily_hold == false);
     assert(file_anchor.validate().format().find("unknown monthly_anchor") == std::string::npos);
 
+    // processes/extemis/source selects where every category's inputs come
+    // from: 'file' (the readers; the default when the key is absent) or
+    // 'nuopc_import' (connected NUOPC imports only).  Any other value fails
+    // and names the key and the allowed values.
+    catchem::ConfigManager bogus_source;
+    bogus_source.load_from_file(fixtures + "emission_bogus_source.yml");
+    const auto& bogus_source_report = bogus_source.validate();
+    assert(bogus_source_report.has_errors());
+    const std::string bogus_source_text = bogus_source_report.format();
+    assert(bogus_source_text.find("processes/extemis/source") != std::string::npos);
+    assert(bogus_source_text.find("unknown source value: bogus") != std::string::npos);
+    assert(bogus_source_text.find("use one of: file, nuopc_import") != std::string::npos);
+
+    catchem::ConfigManager import_source;
+    import_source.load_from_file(fixtures + "emission_source_nuopc_import.yml");
+    assert(import_source.validate().format().find("unknown source value") == std::string::npos);
+    assert(import_source.get_string("processes/extemis/source", "file") == "nuopc_import");
+    // No key: the file default, and no error.
+    assert(file_anchor.get_string("processes/extemis/source", "file") == "file");
+    assert(file_anchor.validate().format().find("unknown source value") == std::string::npos);
+
     void* core = reinterpret_cast<void*>(1);
     assert(catchem_core_create_from_config_checked((fixtures + "platform_integrity_invalid.yml").c_str(), &core) !=
            CATCHEM_SUCCESS);

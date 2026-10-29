@@ -68,7 +68,7 @@ contains
    !--------------------------------------------------------------------------
    subroutine catchem_regrid_field(cache, filename, varname, dstField, &
       latname, lonname, regrid_method_name, &
-      timeSlice, levelSlice, didRegrid, rc)
+      timeSlice, levelSlice, didRegrid, category, rc)
       type(RegridCache),    intent(inout)         :: cache
       character(len=*),     intent(in)            :: filename
       character(len=*),     intent(in)            :: varname
@@ -79,6 +79,7 @@ contains
       integer,              intent(in),  optional :: timeSlice
       integer,              intent(in),  optional :: levelSlice
       logical,              intent(out), optional :: didRegrid
+      character(len=*),     intent(in),  optional :: category  !< Emission category, for the open log line
       integer,              intent(out), optional :: rc
 
       ! -- local variables
@@ -131,6 +132,14 @@ contains
       end if
 
       ! ---- Open the file (read-only) on every PET ----
+      ! One DEBUG line per emission input open (catchem_emis_mod's format; that module uses this one).
+      if (present(category)) then
+         call ESMF_LogWrite('CATChem: emission open category='//trim(category)//' reader=regrid path='// &
+            trim(filename), ESMF_LOGMSG_DEBUG, rc=localrc)
+      else
+         call ESMF_LogWrite('CATChem: emission open category=? reader=regrid path='//trim(filename), &
+            ESMF_LOGMSG_DEBUG, rc=localrc)
+      end if
       ncStatus = nf90_open(trim(filename), NF90_NOWRITE, ncid)
       if (ncStatus /= NF90_NOERR) then
          call ESMF_LogSetError(ESMF_RC_FILE_OPEN, &

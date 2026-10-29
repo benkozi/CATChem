@@ -616,6 +616,16 @@ contains
             startTime=startTime, stopTime=stopTime, timeStep=timeStep, clock=clock, rc=rc)
          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=__FILE__)) return  ! bail out
+         ! Nothing is connected on this path, but the binding step still runs: under
+         ! processes/extemis/source: nuopc_import every active category then fails here by name
+         ! (catchem_emis_finish_binding) instead of at the first update.
+         nullify(is%wrap)
+         call ESMF_GridCompGetInternalState(model, is, rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+            line=__LINE__, file=__FILE__)) return  ! bail out
+         call catchem_emis_bind_imports(is%wrap, importState, rc)
+         if (ESMF_LogFoundError(rcToCheck=rc, msg="CATChem: binding the emission imports failed", &
+            line=__LINE__, file=__FILE__)) return  ! bail out
       end if
 
       ! -- indicate that data initialization is complete (breaking out of init-loop)

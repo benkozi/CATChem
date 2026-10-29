@@ -945,4 +945,48 @@ if(CATCHEM_BUILD_NUOPC)
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   catchem_label_tests("integration;diagnostics" test_nuopc_diag_output)
+
+  # processes/extemis/source (file | nuopc_import) and the emission-open log lines: one executable, one
+  # test per case, each with its own ESMF log in emis_source/ (see test_nuopc_emis_source.F90).
+  add_executable(test_nuopc_emis_source test_nuopc_emis_source.F90)
+  target_link_libraries(
+    test_nuopc_emis_source
+    PRIVATE NUOPC_CATChem_cap CATChem CATChem_core MPI::MPI_Fortran MPI::MPI_CXX
+  )
+  set_target_properties(
+    test_nuopc_emis_source
+    PROPERTIES
+      Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/include
+      LINKER_LANGUAGE Fortran
+  )
+  target_include_directories(
+    test_nuopc_emis_source
+    PRIVATE
+      ${CMAKE_BINARY_DIR}/include
+      $<TARGET_PROPERTY:NUOPC_CATChem_cap,Fortran_MODULE_DIRECTORY>
+  )
+  set(EMIS_SOURCE_RUN_DIR ${CMAKE_CURRENT_BINARY_DIR}/emis_source)
+  file(MAKE_DIRECTORY ${EMIS_SOURCE_RUN_DIR})
+  file(GLOB _emis_source_configs ${CMAKE_CURRENT_SOURCE_DIR}/emis_source/*.yml)
+  file(
+    COPY ${_emis_source_configs} ${CMAKE_CURRENT_SOURCE_DIR}/CATChem_species.yml
+    DESTINATION ${EMIS_SOURCE_RUN_DIR}
+  )
+  foreach(
+    _case
+    file_reads
+    import_no_reads
+    import_unconnected
+    import_point_active
+    import_nongridded_active
+    import_point_inactive
+  )
+    add_test(
+      NAME nuopc_emis_source_${_case}
+      COMMAND test_nuopc_emis_source ${_case}
+      WORKING_DIRECTORY ${EMIS_SOURCE_RUN_DIR}
+    )
+    set_tests_properties(nuopc_emis_source_${_case} PROPERTIES TIMEOUT 60)
+    catchem_label_tests("integration;boundary" nuopc_emis_source_${_case})
+  endforeach()
 endif()

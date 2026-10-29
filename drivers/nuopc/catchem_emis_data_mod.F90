@@ -197,6 +197,7 @@ MODULE catchem_nuopc_emis_data_mod
       INTEGER                                   :: total_fields = 0    !< Total number of emission fields
       CHARACTER(LEN=NUOPC_LONG_NAME_LEN)                        :: data_source = ''    !< Data source information
       REAL(fp)                                  :: global_scale = 1.0_fp !< Global scaling factor for all emissions
+      CHARACTER(LEN=16)                         :: source = 'file'     !< processes/extemis/source: file (the readers) or nuopc_import (connected imports only)
       ! Regridding resources belong to this component instance.  A module-level
       ! cache lets one CATChem instance destroy route handles still used by another.
       type(RegridCache)                         :: regrid_cache
