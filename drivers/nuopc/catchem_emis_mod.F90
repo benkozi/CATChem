@@ -435,7 +435,7 @@ contains
       integer,                   intent(out)   :: rc
 
       integer :: ncStatus, ncid, ifield, varId, ndims, uid, spatial_ndims
-      integer :: nlev_var
+      integer :: nlev_var, localrc
       integer, allocatable :: dimids(:)
       character(len=NF90_MAX_NAME) :: dimName
       logical :: is_time
@@ -454,6 +454,8 @@ contains
       ! data-open (AQMIO_Open in catchem_emis_read) reports any genuine I/O
       ! error via ESMF_LogFoundError, so we return rc=success here.
       if (ncStatus /= NF90_NOERR) return
+      call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=catchem_emis_detect_field_ranks path="//trim(filename), &
+         ESMF_LOGMSG_INFO, rc=localrc)
 
       ! Identify the unlimited (record) dimension, if any
       uid = -1
@@ -2205,6 +2207,8 @@ contains
          rc = CC_FAILURE
          return
       end if
+      call ESMF_LogWrite("CATCHEM_FILE_READ: format=point_ascii source=catchem_emis_read_points path="//trim(filename), &
+         ESMF_LOGMSG_INFO, rc=localrc)
 
       ! ---- First pass: count data rows inside the label:: ... :: block ----
       in_table = .false.

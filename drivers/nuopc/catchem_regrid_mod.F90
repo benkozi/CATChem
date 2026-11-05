@@ -136,6 +136,13 @@ contains
             line=__LINE__, file=__FILE__, rcToReturn=rc)
          return
       end if
+      if (.not. present(levelSlice)) then
+         call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=catchem_regrid_field path="//trim(filename), &
+            ESMF_LOGMSG_INFO, rc=localrc)
+      else if (levelSlice == 1) then
+         call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=catchem_regrid_field path="//trim(filename), &
+            ESMF_LOGMSG_INFO, rc=localrc)
+      end if
 
       ! ---- Read lon/lat coordinate dimensions ----
       call read_coord_dims(ncid, lonname, latname, nlon, nlat, localrc)

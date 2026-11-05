@@ -483,6 +483,8 @@ contains
                         rcToReturn=rc)
                      return  ! bail out
                   end if
+                  call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=AQMIO_Open path="//trim(fullName), &
+                     ESMF_LOGMSG_INFO, rc=localrc)
                end if
 #else
                call ESMF_LogSetError(rcToCheck=ESMF_RC_LIB_NOT_PRESENT, &
@@ -509,6 +511,10 @@ contains
                      file=__FILE__, &
                      rcToReturn=rc)
                   return
+               end if
+               if (.not. create) then
+                  call ESMF_LogWrite("CATCHEM_FILE_READ: format=binary source=AQMIO_Open path="//trim(fullName), &
+                     ESMF_LOGMSG_INFO, rc=localrc)
                end if
 
             else
@@ -3844,6 +3850,8 @@ contains
          if (present(rc)) rc = ESMF_FAILURE
          return
       end if
+      call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=AQMIO_Read1D path="//trim(filename), &
+         ESMF_LOGMSG_INFO, rc=localrc)
 
       ! Get variable ID
       localrc = nf90_inq_varid(ncid, trim(varname), varid)
@@ -3947,6 +3955,8 @@ contains
             line=__LINE__, file=__FILE__, rcToReturn=rc)
          return
       end if
+      call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=AQMIO_ReadTimeCoord path="//trim(filename), &
+         ESMF_LOGMSG_INFO, rc=localrc)
 
       ! Locate the 'time' variable — silent return if absent
       localrc = nf90_inq_varid(ncid, 'time', varid)

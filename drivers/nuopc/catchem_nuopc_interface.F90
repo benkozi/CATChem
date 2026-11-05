@@ -292,6 +292,35 @@ contains
 
       !initialize extemission data here
       config_manager => state_mgr%get_config_ptr()
+      if (len_trim(config_file) > 0) then
+         call ESMF_LogWrite("CATCHEM_FILE_READ: format=yaml source=catchem_nuopc_init path="//trim(config_file), &
+            ESMF_LOGMSG_INFO, rc=rc)
+      end if
+      if (associated(config_manager)) then
+         if (len_trim(config_manager%config_data%file_paths%Species_File) > 0) then
+            call ESMF_LogWrite("CATCHEM_FILE_READ: format=yaml source=catchem_nuopc_init path="// &
+               trim(config_manager%config_data%file_paths%Species_File), ESMF_LOGMSG_INFO, rc=rc)
+         end if
+         if (len_trim(config_manager%config_data%file_paths%Emission_File) > 0) then
+            call ESMF_LogWrite("CATCHEM_FILE_READ: format=yaml source=catchem_nuopc_init path="// &
+               trim(config_manager%config_data%file_paths%Emission_File), ESMF_LOGMSG_INFO, rc=rc)
+         end if
+      end if
+      block
+         type(ChemStateType), pointer :: chem_state_ptr
+         integer :: imie
+         chem_state_ptr => state_mgr%get_chem_state_ptr()
+         if (associated(chem_state_ptr)) then
+            if (allocated(chem_state_ptr%MieData)) then
+               do imie = 1, size(chem_state_ptr%MieData)
+                  if (allocated(chem_state_ptr%MieData(imie)%table_name)) then
+                     call ESMF_LogWrite("CATCHEM_FILE_READ: format=netcdf source=init_mie_data path="// &
+                        trim(chem_state_ptr%MieData(imie)%table_name), ESMF_LOGMSG_INFO, rc=rc)
+                  end if
+               end do
+            end if
+         end if
+      end block
 #ifdef CATCHEM_TRACE_NUOPC
       call ESMF_TraceRegionEnter("CATCHEM:emis_init", rc=rc)
       if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -2564,6 +2593,8 @@ contains
          errflg = CC_FAILURE
          return
       endif
+      call ESMF_LogWrite("CATCHEM_FILE_READ: format=yaml source=load_field_config path="//trim(filename), &
+         ESMF_LOGMSG_INFO)
 
       ! Allocate temporary storage for up to 50 fields
       allocate(temp_fields(50))
