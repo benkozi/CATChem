@@ -110,7 +110,14 @@ if(TARGET yaml-cpp AND NOT TARGET yaml-cpp::yaml-cpp)
   add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
 endif()
 if(TARGET yaml-cpp::yaml-cpp AND NOT TARGET yaml-cpp)
-  add_library(yaml-cpp ALIAS yaml-cpp::yaml-cpp)
+  # An installed yaml-cpp (CATCHEM_USE_SYSTEM_YAML_CPP=ON, or a build without
+  # NUOPC) brings only the imported yaml-cpp::yaml-cpp. An ALIAS of an imported
+  # target is visible in this directory alone, so `yaml-cpp` elsewhere
+  # (src/process/gaschem, src/process/photolysis, cc_nuopc) became a raw
+  # -lyaml-cpp on the consumers' link lines. A GLOBAL interface target
+  # resolves the plain name in every directory.
+  add_library(yaml-cpp INTERFACE IMPORTED GLOBAL)
+  target_link_libraries(yaml-cpp INTERFACE yaml-cpp::yaml-cpp)
 endif()
 
 #
