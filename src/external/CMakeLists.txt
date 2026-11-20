@@ -127,6 +127,10 @@ if(CATCHEM_BUILD_MUSICA)
   set(MUSICA_ENABLE_MICM ON)
   set(MUSICA_ENABLE_TUVX ON)
   set(MUSICA_ENABLE_CARMA OFF)
+  # MIEM (MUSICA's emissions model) is not used by CATChem; MUSICA 0.18
+  # turned it on by default, and its NetCDF lookup does not know the
+  # NetCDF::NetCDF_C targets CATChem's FindNetCDF defines.
+  set(MUSICA_ENABLE_MIEM OFF)
 
   # Add MUSICA as a subdirectory
   add_subdirectory(musica)

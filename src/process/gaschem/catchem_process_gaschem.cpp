@@ -133,7 +133,10 @@ namespace catchem {
         state->chemistry().conc->host_write();
         auto conc = state->chemistry().conc->host_view;
 
-        auto& micm_conditions = micm_state_->GetConditions();
+        // A reference to the conditions vector (MUSICA <= 0.17) or a span over
+        // them (MUSICA 0.18: State::GetConditions returns std::span); writes go
+        // through to the state either way.
+        decltype(auto) micm_conditions = micm_state_->GetConditions();
         auto& micm_concs = micm_state_->GetOrderedConcentrations();
         auto& micm_rate_params = micm_state_->GetOrderedRateParameters();
 
