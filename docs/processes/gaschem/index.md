@@ -23,7 +23,14 @@ During a chemistry simulation timestep, `GasChemProcess::run` executes a highly-
     Any trailing unused columns in a partial final batch ($N_{\text{cols}} \bmod N_{\text{batch\_cols}} \neq 0$) are padded with a copy of the last valid column in the batch during the solve and ignored on copy-back.
 3.  **Meteorology Guard**: Throws `std::domain_error` if temperature, pressure, or dry air density is non-finite or not positive in any cell. This check is not affected by `negative_concentration_policy`.
 4.  **Pre-Resolved Species & Environmental State Mapping**:
-    *   During `GasChemProcess::init`, CATChem species indices are mapped once (case-insensitively) to MICM variable indices so the cell loops perform zero string allocations or hash-map lookups.
+    *   During `GasChemProcess::init`, every MICM variable is resolved once to a CATChem species through the active mechanism definition (`state->chemistry().mechanism`), so the cell loops perform zero string allocations or hash-map lookups. Resolution is case-insensitive and honours species `aliases`, so a mechanism that names a species differently from the host can be bridged from the species file:
+        ```yaml
+        - name: o3p
+          aliases: [O]      # the MICM mechanism calls this species O
+        ```
+    *   Two MICM variables that resolve to the same CATChem species fail initialization.
+    *   **Every species in the MICM mechanism must be in the CATChem species file.** A MICM variable with no CATChem counterpart fails initialization with a message naming it. MICM integrates every species in its mechanism, and the solver state is reused from one column batch to the next, so an unsupplied species would otherwise start from another column's result.
+    *   Initialization logs one line listing CATChem gas species that the mechanism does not contain. Those are left untouched.
     *   Converts dry air density (`AIRDEN_DRY` in $\text{kg/m}^3$) to dry air molar density ($\text{mol/m}^3$) using the molecular weight of dry air ($0.0289644\text{ kg/mol}$):
         $$\rho_{\text{molar}} = \frac{\rho_{\text{dry}}}{0.0289644}$$
     *   Converts gas concentrations from Volume Mixing Ratios (VMR, $\text{ppmv}$) to molar densities ($\text{mol/m}^3$) using dry air molar density:
@@ -62,6 +69,19 @@ packed into the reusable `musica::State` per `Solve()` call.
 `negative_concentration_policy` (optional, default `reject`) selects what happens to a
 negative concentration; see the next section.
 
+These four are the only options. Any other key under `gaschem`, including a misspelt
+one such as `column_per_batch` or a nested block, stops the run at start-up with the
+accepted names listed, as does an out-of-range value. The framework keys `activate`,
+`diagnostics` and `diag_species` are not options and are always allowed. The check
+runs before MICM is constructed: `GasChemProcess::parse_settings` is registered as the
+process's settings validator, and `init()` calls the same function, so a process that
+is initialized directly is checked as well. A legacy top-level `process:` block is
+read the same way as `processes:`.
+
+```text
+Unknown option(s) for process 'gaschem': column_per_batch. Accepted options: columns_per_batch, config_dir, config_file, negative_concentration_policy.
+```
+
 ```yaml
 processes:
   gaschem:
@@ -79,6 +99,25 @@ processes:
 > match the TUV-x radiator labels: `gaschem` binds each `"PHOTO.<label>"` rate
 > parameter to the `photolysis_rate_<label>` diagnostic produced by the photolysis
 > process (e.g. v0 `jO3->O1D` vs v1 `jo3_b` are *different* labels).
+
+### Species coverage
+
+The species file must list every species of the MICM mechanism, by name or by alias.
+Third-body species such as `M` are not MICM variables and need no entry. A species
+that the host model should not transport still needs an entry, marked as not advected:
+
+```yaml
+- name: o1d
+  __is_gas: true
+  __is_advected: false     # solved by MICM, carried by CATChem, not transported by the host
+  molecular weight [kg mol-1]: 0.01600
+```
+
+If any mechanism species is missing, initialization stops:
+
+```text
+GasChemProcess: MICM mechanism species missing from the CATChem species list: N2. Add them to the species file; use is_advected: false for species the host should not transport.
+```
 
 ### Negative concentrations (`negative_concentration_policy`)
 
@@ -109,14 +148,23 @@ PET-local location:
 GasChem received a negative or non-finite concentration (-1.000000e-12) for O at column=4, level=2, batch=1 (zero-based indices)
 ```
 
-Under `clamp`, each PET logs one warning the first time it floors a value, with the
-number of cells and the most negative value and where it was. Later timesteps log the
-same line at debug level, and `finalize` logs the totals since `init`:
+Under `clamp`, each PET logs up to two warnings: one the first time it floors an
+input from the host, and one the first time it floors an output from the solver. The
+two are tracked separately because a negative from the solver is a different problem
+from noise in the host's tracers, and an earlier input warning must not hide it. The
+`first_occurrence` field says which the line is for (`inputs`, `solver_outputs`, or
+`inputs,solver_outputs` when both first happen on the same timestep). Each line gives
+the number of cells and the most negative value and where it was. Later timesteps log
+the same line at debug level with `first_occurrence=none`, and `finalize` logs the
+totals since `init`:
 
 ```text
-[WARN ] GasChemProcess: floored negative concentrations to zero | inputs_floored=1 min_input=-1.000000e-12 min_input_species=O min_input_column=4 min_input_level=2 outputs_floored=0 min_output=0.000000e+00 min_output_species=none min_output_column=-1 min_output_level=-1
+[WARN ] GasChemProcess: floored negative concentrations to zero | first_occurrence=inputs inputs_floored=1 min_input=-1.000000e-12 min_input_species=O min_input_column=4 min_input_level=2 outputs_floored=0 min_output=0.000000e+00 min_output_species=none min_output_column=-1 min_output_level=-1
 [INFO ] GasChemProcess: negative concentrations floored to zero since init | inputs_floored=1 min_input=-1.000000e-12 outputs_floored=0 min_output=0.000000e+00
 ```
+
+The counters and minima are updated on every timestep whatever the log level. The
+per-timestep line is only formatted when it will be written.
 
 Flooring adds mass equal to the sum of the floored values. Check `min_input` after
 enabling `clamp`: values near machine noise are expected, while a large negative
@@ -143,6 +191,16 @@ Runs a coupled multi-level atmospheric column simulation containing both the C++
 4.  Asserts that photolysis rate diagnostics are successfully populated and mapped to MICM, and that solver concentrations successfully converge with stable mass balance.
 
 The same target runs a six-column case across `columns_per_batch` values of 1, 2, 4,
-and 6, and a `negative_concentration_policy` suite: `reject` throws with the value and
+and 6 and requires every batch size to match the single-column result within ten times
+the solver's own tolerances (its relative tolerance, plus the mechanism's declared
+absolute tolerance converted to ppmv). It also runs a `negative_concentration_policy` suite: `reject` throws with the value and
 location in the message, `clamp` solves bit-for-bit like a zero input and counts each
-floored cell once, and neither accepts NaN or a non-physical temperature.
+floored cell once, and neither accepts NaN or a non-physical temperature. A further
+suite runs three timesteps and checks that floored inputs and floored solver outputs
+are each warned about once, that the counters do not depend on the log level, and that
+`reject` stops on a negative from the solver. The Chapman mechanism never returns a
+negative, so these cases use a `GasChemProcess` subclass that overrides the protected
+`adjust_solver_output_for_testing` hook, which does nothing in the process itself.
+A settings suite checks the option parser through the registered validator, through a
+directly initialized process, through a legacy `process:` block, and through a `Core`
+built from a runtime YAML.

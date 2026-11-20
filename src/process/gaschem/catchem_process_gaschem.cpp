@@ -5,6 +5,7 @@
 #include "catchem_logger.hpp"
 #include "catchem_process_registry.hpp"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <filesystem>
 #include <iomanip>
@@ -32,6 +33,17 @@ namespace catchem {
             message << what << " (" << format_scientific(value) << ") for " << species << " at column=" << column
                     << ", level=" << level << ", batch=" << batch << " (zero-based indices)";
             return message.str();
+        }
+
+        std::string join_names(const std::vector<std::string>& names) {
+            std::string joined;
+            for (const auto& name : names) {
+                if (!joined.empty()) {
+                    joined += ',';
+                }
+                joined += name;
+            }
+            return joined;
         }
 
         // The most negative concentration floored during one run() call.
@@ -66,72 +78,94 @@ namespace catchem {
     GasChemProcess::GasChemProcess() = default;
     GasChemProcess::~GasChemProcess() = default;
 
-    void GasChemProcess::init(std::shared_ptr<StateManager> state) {
-        Logger::debug(*state, "GasChemProcess::init started");
+    GasChemSettings GasChemProcess::parse_settings(const ProcessConfig& config) {
+        static constexpr std::array<std::string_view, 4> accepted = {"columns_per_batch", "config_dir", "config_file",
+                                                                     "negative_concentration_policy"};
 
-        // 1. Resolve configuration path dynamically via ConfigManager. An explicit
-        // "config_file" selects a single-file MUSICA mechanism (v1 format) and takes
-        // precedence over the "config_dir" directory (v0 CAMP layout) fallback.
-        if (state->config_manager()) {
-            std::string file = state->config_manager()->get_string("processes/gaschem/config_file", "");
-            if (file.empty()) {
-                file = state->config_manager()->get_string("process/gaschem/config_file", "");
-            }
-            if (!file.empty()) {
-                this->config_file_ = file;
-            }
-
-            std::string dir = state->config_manager()->get_string("processes/gaschem/config_dir", "");
-            if (dir.empty()) {
-                dir = state->config_manager()->get_string("process/gaschem/config_dir", "");
-            }
-            if (!dir.empty()) {
-                this->config_dir_ = dir;
+        // Every gaschem option is a flat key, so a nested block is unknown too.
+        std::vector<std::string> unknown;
+        for (const auto& key : config.flat_option_keys()) {
+            if (std::find(accepted.begin(), accepted.end(), key) == accepted.end()) {
+                unknown.push_back(key);
             }
         }
-
-        int cols_per_batch = 1;
-        if (state->config_manager()) {
-            if (!state->config_manager()->get_string("processes/gaschem/columns_per_batch", "").empty()) {
-                cols_per_batch = state->config_manager()->get_int("processes/gaschem/columns_per_batch", 1);
-            } else if (!state->config_manager()->get_string("process/gaschem/columns_per_batch", "").empty()) {
-                cols_per_batch = state->config_manager()->get_int("process/gaschem/columns_per_batch", 1);
-            }
+        for (const auto& path : config.option_paths()) {
+            unknown.push_back(path);
         }
-        if (cols_per_batch < 1) {
+        if (!unknown.empty()) {
+            std::string accepted_names;
+            for (const auto& name : accepted) {
+                if (!accepted_names.empty()) {
+                    accepted_names += ", ";
+                }
+                accepted_names += name;
+            }
+            std::sort(unknown.begin(), unknown.end());
+            std::string unknown_names;
+            for (const auto& name : unknown) {
+                if (!unknown_names.empty()) {
+                    unknown_names += ", ";
+                }
+                unknown_names += name;
+            }
+            throw std::invalid_argument("Unknown option(s) for process 'gaschem': " + unknown_names +
+                                        ". Accepted options: " + accepted_names + ".");
+        }
+
+        GasChemSettings settings;
+        settings.config_file = config.get_string("config_file");
+        settings.config_dir = config.get_string("config_dir");
+
+        const int columns_per_batch = config.get_int("columns_per_batch", 1);
+        if (columns_per_batch < 1) {
             throw std::invalid_argument("GasChemProcess: columns_per_batch must be >= 1, got " +
-                                        std::to_string(cols_per_batch));
+                                        std::to_string(columns_per_batch));
         }
-        this->columns_per_batch_ = static_cast<std::size_t>(cols_per_batch);
+        settings.columns_per_batch = static_cast<std::size_t>(columns_per_batch);
 
         // Negative concentrations are rejected unless the run opts in to flooring
         // them. This key is separate from physical_validation/policy, which governs
         // meteorology, so a run can floor tracer noise from the host and still stop
         // on a bad temperature.
-        std::string negative_policy = "reject";
-        if (state->config_manager()) {
-            std::string configured =
-                state->config_manager()->get_string("processes/gaschem/negative_concentration_policy", "");
-            if (configured.empty()) {
-                configured = state->config_manager()->get_string("process/gaschem/negative_concentration_policy", "");
-            }
-            if (!configured.empty()) {
-                negative_policy = configured;
-            }
-        }
+        const std::string negative_policy = config.get_string("negative_concentration_policy", "reject");
         if (negative_policy == "reject") {
-            this->negative_concentration_policy_ = NegativeConcentrationPolicy::Reject;
+            settings.negative_concentration_policy = NegativeConcentrationPolicy::Reject;
         } else if (negative_policy == "clamp") {
-            this->negative_concentration_policy_ = NegativeConcentrationPolicy::Clamp;
+            settings.negative_concentration_policy = NegativeConcentrationPolicy::Clamp;
         } else {
             throw std::invalid_argument("GasChemProcess: negative_concentration_policy must be reject or clamp, got " +
                                         negative_policy);
         }
+        return settings;
+    }
+
+    void GasChemProcess::init(std::shared_ptr<StateManager> state) {
+        Logger::debug(*state, "GasChemProcess::init started");
+
+        // 1. Read the options. The core has already run parse_settings as the
+        // settings validator when it built this process from the runtime YAML;
+        // calling it here keeps the same checks in force when a test or driver
+        // initializes the process directly. A legacy top-level "process:" block
+        // is parsed into the same ProcessConfig, so it needs no separate lookup.
+        // An explicit config_file (single-file v1 mechanism) takes precedence
+        // over config_dir.
+        GasChemSettings settings;
+        if (const auto config = state->config_manager()) {
+            const auto configured = config->data.processes.find(get_name());
+            if (configured != config->data.processes.end()) {
+                settings = parse_settings(configured->second);
+            }
+        }
+        this->config_file_ = settings.config_file;
+        this->config_dir_ = settings.config_dir;
+        this->columns_per_batch_ = settings.columns_per_batch;
+        this->negative_concentration_policy_ = settings.negative_concentration_policy;
         this->negative_inputs_clamped_ = 0;
         this->negative_outputs_clamped_ = 0;
         this->min_negative_input_ = 0.0;
         this->min_negative_output_ = 0.0;
-        this->clamp_warning_issued_ = false;
+        this->input_clamp_warned_ = false;
+        this->output_clamp_warned_ = false;
 
         if (this->config_dir_.empty()) {
             if (!state->configuration_path().empty()) {
@@ -174,81 +208,123 @@ namespace catchem {
             rosenbrock_params_.h_max = 60;
             rosenbrock_params_.h_start = 1.0e-5;
             rosenbrock_params_.max_number_of_steps = 100000;
-            micm_instance_ = std::make_unique<musica::MICM>(micm_config_path, musica::RosenbrockStandardOrder,
-                                                            rosenbrock_params_);
+            micm_instance_ =
+                std::make_unique<musica::MICM>(micm_config_path, musica::RosenbrockStandardOrder, rosenbrock_params_);
             const std::size_t batch_cells = this->columns_per_batch_ * static_cast<std::size_t>(state->level_count());
             micm_state_ = std::make_unique<musica::State>(*micm_instance_, batch_cells);
-            initialized_ = true;
             std::clog << "[INFO] GasChemProcess: initialized MICM successfully!" << std::endl;
-
-            // Precompute species and rate-parameter index mappings once so run() performs
-            // no per-cell string constructions or hash-map lookups.
-            vector_size_ = micm_instance_->GetVectorSize();
-            auto variable_map = micm_state_->GetVariableMap();
-            n_micm_species_ = variable_map.size();
-            species_mappings_.clear();
-            species_mappings_.reserve(static_cast<std::size_t>(state->species_count()));
-            requires_qv_ = false;
-
-            for (int ispec = 0; ispec < state->species_count(); ++ispec) {
-                const std::string& raw_name = state->chemistry().species_list[ispec].short_name;
-                std::string upper_name = raw_name;
-                std::transform(upper_name.begin(), upper_name.end(), upper_name.begin(),
-                               [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-                std::string lower_name = raw_name;
-                std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
-                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-
-                auto it = variable_map.find(raw_name);
-                if (it == variable_map.end()) {
-                    it = variable_map.find(upper_name);
-                }
-                if (it == variable_map.end()) {
-                    it = variable_map.find(lower_name);
-                }
-
-                if (it != variable_map.end()) {
-                    SpeciesInputKind kind = SpeciesInputKind::StandardPpmv;
-                    if (lower_name == "o2") {
-                        kind = SpeciesInputKind::FixedO2;
-                    } else if (lower_name == "n2") {
-                        kind = SpeciesInputKind::FixedN2;
-                    } else if (lower_name == "h2o") {
-                        kind = SpeciesInputKind::DerivedH2O;
-                        requires_qv_ = true;
-                    }
-                    species_mappings_.push_back(SpeciesMapping{ispec, it->second, kind, it->first});
-                } else {
-                    Logger::warn(*state, "Active species not found in MICM solver variable map",
-                                 {{"species", raw_name}});
-                }
-            }
-
-            auto rate_param_map = micm_state_->GetRateParameterMap();
-            n_rate_params_ = rate_param_map.size();
-            rate_param_mappings_.clear();
-            rate_param_mappings_.reserve(n_rate_params_);
-            for (const auto& [param_name, i_param] : rate_param_map) {
-                if (param_name.rfind("PHOTO.", 0) == 0) {
-                    rate_param_mappings_.push_back(
-                        RateParamMapping{i_param, RateParamKind::Photolysis, "photolysis_rate_" + param_name.substr(6)});
-                } else if (param_name.rfind("LOSS.", 0) == 0) {
-                    rate_param_mappings_.push_back(RateParamMapping{i_param, RateParamKind::Loss, {}});
-                }
-            }
-
-            Logger::info(*state, "GasChemProcess: initialized MICM state",
-                         {{"column_count", std::to_string(state->column_count())},
-                          {"level_count", std::to_string(state->level_count())},
-                          {"columns_per_batch", std::to_string(columns_per_batch_)},
-                          {"negative_concentration_policy", negative_policy},
-                          {"micm_grid_cells", std::to_string(micm_state_->NumberOfGridCells())},
-                          {"micm_species_count", std::to_string(micm_state_->NumberOfSpecies())}});
         } catch (const std::exception& e) {
             Logger::error(*state, "GasChemProcess: failed to initialize MICM", {{"error", e.what()}});
             initialized_ = false;
             throw std::runtime_error(std::string("GasChemProcess: failed to initialize MICM: ") + e.what());
         }
+
+        // 3. Resolve every MICM variable to a CATChem species through the active
+        // mechanism definition, which matches names case-insensitively and honours
+        // species aliases. Doing this once here keeps string construction and
+        // hash-map lookups out of the cell loops in run().
+        vector_size_ = micm_instance_->GetVectorSize();
+        const auto variable_map = micm_state_->GetVariableMap();
+        n_micm_species_ = variable_map.size();
+        species_mappings_.clear();
+        species_mappings_.reserve(n_micm_species_);
+        std::vector<std::string> unmapped_micm_species;
+        requires_qv_ = false;
+
+        const auto& mechanism = state->chemistry().mechanism;
+        for (const auto& [micm_name, micm_idx] : variable_map) {
+            if (!mechanism || !mechanism->contains(micm_name)) {
+                unmapped_micm_species.push_back(micm_name);
+                continue;
+            }
+            // O2 and N2 are set from dry air density and H2O from specific humidity
+            // in run(), instead of from the host's tracer array.
+            std::string lower_name = micm_name;
+            std::transform(lower_name.begin(), lower_name.end(), lower_name.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            SpeciesInputKind kind = SpeciesInputKind::StandardPpmv;
+            if (lower_name == "o2") {
+                kind = SpeciesInputKind::FixedO2;
+            } else if (lower_name == "n2") {
+                kind = SpeciesInputKind::FixedN2;
+            } else if (lower_name == "h2o") {
+                kind = SpeciesInputKind::DerivedH2O;
+                requires_qv_ = true;
+            }
+            species_mappings_.push_back(
+                SpeciesMapping{static_cast<int>(mechanism->index_of(micm_name)), micm_idx, kind, micm_name});
+        }
+
+        // MICM integrates every species in its mechanism, so a species the host does
+        // not supply would start from whatever an earlier solve left in the reused
+        // state. Require complete coverage instead of choosing a value for it.
+        if (!unmapped_micm_species.empty()) {
+            std::sort(unmapped_micm_species.begin(), unmapped_micm_species.end());
+            throw std::invalid_argument(
+                "GasChemProcess: MICM mechanism species missing from the CATChem species list: " +
+                join_names(unmapped_micm_species) +
+                ". Add them to the species file; use is_advected: false for species the host should not transport.");
+        }
+
+        // The variable map is unordered. Sort by CATChem species index so run()
+        // visits species in a fixed order, and so two MICM variables that resolve
+        // to the same CATChem species end up next to each other.
+        std::sort(species_mappings_.begin(), species_mappings_.end(),
+                  [](const SpeciesMapping& a, const SpeciesMapping& b) {
+                      return a.catchem_idx != b.catchem_idx ? a.catchem_idx < b.catchem_idx : a.name < b.name;
+                  });
+        for (std::size_t i = 1; i < species_mappings_.size(); ++i) {
+            const auto& previous = species_mappings_[i - 1];
+            const auto& current = species_mappings_[i];
+            if (previous.catchem_idx == current.catchem_idx) {
+                const auto& target = state->chemistry().species_list[static_cast<std::size_t>(current.catchem_idx)];
+                throw std::invalid_argument("GasChemProcess: MICM species " + previous.name + " and " + current.name +
+                                            " both resolve to CATChem species " + target.short_name);
+            }
+        }
+
+        // Gas species the host carries that the mechanism does not contain are left
+        // untouched by run(). Report them once, in one line.
+        std::vector<char> in_mechanism(static_cast<std::size_t>(state->species_count()), 0);
+        for (const auto& sp : species_mappings_) {
+            in_mechanism[static_cast<std::size_t>(sp.catchem_idx)] = 1;
+        }
+        std::vector<std::string> gas_outside_mechanism;
+        for (const int ispec : state->chemistry().indices(SpeciesCategory::Gas)) {
+            if (!in_mechanism[static_cast<std::size_t>(ispec)]) {
+                gas_outside_mechanism.push_back(
+                    state->chemistry().species_list[static_cast<std::size_t>(ispec)].short_name);
+            }
+        }
+        if (!gas_outside_mechanism.empty()) {
+            Logger::warn(*state, "GasChemProcess: CATChem gas species not in the MICM mechanism",
+                         {{"count", std::to_string(gas_outside_mechanism.size())},
+                          {"species", join_names(gas_outside_mechanism)}});
+        }
+
+        const auto rate_param_map = micm_state_->GetRateParameterMap();
+        n_rate_params_ = rate_param_map.size();
+        rate_param_mappings_.clear();
+        rate_param_mappings_.reserve(n_rate_params_);
+        for (const auto& [param_name, i_param] : rate_param_map) {
+            if (param_name.rfind("PHOTO.", 0) == 0) {
+                rate_param_mappings_.push_back(
+                    RateParamMapping{i_param, RateParamKind::Photolysis, "photolysis_rate_" + param_name.substr(6)});
+            } else if (param_name.rfind("LOSS.", 0) == 0) {
+                rate_param_mappings_.push_back(RateParamMapping{i_param, RateParamKind::Loss, {}});
+            }
+        }
+
+        initialized_ = true;
+        Logger::info(*state, "GasChemProcess: initialized MICM state",
+                     {{"column_count", std::to_string(state->column_count())},
+                      {"level_count", std::to_string(state->level_count())},
+                      {"columns_per_batch", std::to_string(columns_per_batch_)},
+                      {"negative_concentration_policy",
+                       negative_concentration_policy_ == NegativeConcentrationPolicy::Clamp ? "clamp" : "reject"},
+                      {"micm_grid_cells", std::to_string(micm_state_->NumberOfGridCells())},
+                      {"micm_species_count", std::to_string(micm_state_->NumberOfSpecies())},
+                      {"mapped_species_count", std::to_string(species_mappings_.size())}});
     }
 
     void GasChemProcess::run(std::shared_ptr<StateManager> state) {
@@ -269,8 +345,8 @@ namespace catchem {
             !state->meteorology().PMID->is_current(import_generation) ||
             !state->meteorology().AIRDEN_DRY->is_current(import_generation) || (requires_qv_ && !have_qv) ||
             !state->chemistry().conc) {
-            throw std::runtime_error(
-                "GasChem requires current T, PMID, AIRDEN_DRY, QV (when h2o is active), and chemistry concentration fields");
+            throw std::runtime_error("GasChem requires current T, PMID, AIRDEN_DRY, QV (when h2o is active), and "
+                                     "chemistry concentration fields");
         }
 
         auto temp = state->meteorology().T->host_view;
@@ -350,7 +426,9 @@ namespace catchem {
                     const std::size_t species_group_base = group_index * n_micm_species_;
                     const std::size_t param_group_base = group_index * n_rate_params_;
 
-                    // Copy concentrations: ppmv -> mol/m3
+                    // Copy concentrations: ppmv -> mol/m3. init() guarantees every MICM
+                    // species is mapped, so this overwrites the whole cell and nothing
+                    // from the previous batch survives in the reused state.
                     for (const auto& sp : species_mappings_) {
                         double ppmv_val = conc(icol, ilev, sp.catchem_idx);
                         if (!std::isfinite(ppmv_val) || (ppmv_val < 0.0 && reject_negative))
@@ -363,7 +441,7 @@ namespace catchem {
                                 floored_inputs.record(ppmv_val, sp.name, icol, ilev);
                             }
                             ppmv_val = 0.0;
-			}
+                        }
                         double conc_molar = ppmv_val * 1.0e-6 * air_density_mol;
                         if (have_qv) {
                             if (sp.input_kind == SpeciesInputKind::FixedO2) {
@@ -408,6 +486,7 @@ namespace catchem {
                     std::to_string(batch_idx) + " (col_start=" + std::to_string(col_start) + ", col_count=" +
                     std::to_string(col_count) + "): " + micm::SolverStateToString(solver_result.state_));
             }
+            adjust_solver_output_for_testing(micm_concs, batch_idx);
 
             // 5. Convert output concentrations back: mol/m3 -> ppmv (valid columns only)
             for (int ilev = 0; ilev < nl; ++ilev) {
@@ -440,45 +519,64 @@ namespace catchem {
             }
         }
 
-        // 6. Report floored cells: a warning the first time on this PET and debug
-        // after that, so a long run does not log one line per PET per timestep.
+        // 6. Report floored cells. This PET warns once for inputs and once for
+        // solver outputs, the first time each is floored, and logs at debug after
+        // that, so a long run does not log one line per PET per timestep. A
+        // negative from the solver is a different problem from noise in the host's
+        // tracers, so an earlier input warning does not silence it.
         if (floored_inputs.count + floored_outputs.count > 0) {
             negative_inputs_clamped_ += floored_inputs.count;
             negative_outputs_clamped_ += floored_outputs.count;
             min_negative_input_ = std::min(min_negative_input_, floored_inputs.value);
             min_negative_output_ = std::min(min_negative_output_, floored_outputs.value);
 
-            const std::string inputs_floored = std::to_string(floored_inputs.count);
-            const std::string min_input = format_scientific(floored_inputs.value);
-            const std::string min_input_species = floored_inputs.species_name();
-            const std::string min_input_column = std::to_string(floored_inputs.column);
-            const std::string min_input_level = std::to_string(floored_inputs.level);
-            const std::string outputs_floored = std::to_string(floored_outputs.count);
-            const std::string min_output = format_scientific(floored_outputs.value);
-            const std::string min_output_species = floored_outputs.species_name();
-            const std::string min_output_column = std::to_string(floored_outputs.column);
-            const std::string min_output_level = std::to_string(floored_outputs.level);
-            const Logger::ContextList context = {{"inputs_floored", inputs_floored},
-                                                 {"min_input", min_input},
-                                                 {"min_input_species", min_input_species},
-                                                 {"min_input_column", min_input_column},
-                                                 {"min_input_level", min_input_level},
-                                                 {"outputs_floored", outputs_floored},
-                                                 {"min_output", min_output},
-                                                 {"min_output_species", min_output_species},
-                                                 {"min_output_column", min_output_column},
-                                                 {"min_output_level", min_output_level}};
-            if (!clamp_warning_issued_) {
-                Logger::warn(*state, "GasChemProcess: floored negative concentrations to zero", context);
-                clamp_warning_issued_ = true;
-            } else {
-                Logger::debug(*state, "GasChemProcess: floored negative concentrations to zero", context);
+            const bool first_input = floored_inputs.count > 0 && !input_clamp_warned_;
+            const bool first_output = floored_outputs.count > 0 && !output_clamp_warned_;
+            input_clamp_warned_ = input_clamp_warned_ || first_input;
+            output_clamp_warned_ = output_clamp_warned_ || first_output;
+            const bool warning_due = first_input || first_output;
+
+            // Format the context only when a line will be written.
+            if (warning_due || Logger::enabled(Logger::Level::Debug)) {
+                const std::string_view first_occurrence = first_input
+                                                              ? (first_output ? "inputs,solver_outputs" : "inputs")
+                                                              : (first_output ? "solver_outputs" : "none");
+                const std::string inputs_floored = std::to_string(floored_inputs.count);
+                const std::string min_input = format_scientific(floored_inputs.value);
+                const std::string min_input_species = floored_inputs.species_name();
+                const std::string min_input_column = std::to_string(floored_inputs.column);
+                const std::string min_input_level = std::to_string(floored_inputs.level);
+                const std::string outputs_floored = std::to_string(floored_outputs.count);
+                const std::string min_output = format_scientific(floored_outputs.value);
+                const std::string min_output_species = floored_outputs.species_name();
+                const std::string min_output_column = std::to_string(floored_outputs.column);
+                const std::string min_output_level = std::to_string(floored_outputs.level);
+                const Logger::ContextList context = {{"first_occurrence", first_occurrence},
+                                                     {"inputs_floored", inputs_floored},
+                                                     {"min_input", min_input},
+                                                     {"min_input_species", min_input_species},
+                                                     {"min_input_column", min_input_column},
+                                                     {"min_input_level", min_input_level},
+                                                     {"outputs_floored", outputs_floored},
+                                                     {"min_output", min_output},
+                                                     {"min_output_species", min_output_species},
+                                                     {"min_output_column", min_output_column},
+                                                     {"min_output_level", min_output_level}};
+                if (warning_due) {
+                    Logger::warn(*state, "GasChemProcess: floored negative concentrations to zero", context);
+                } else {
+                    Logger::debug(*state, "GasChemProcess: floored negative concentrations to zero", context);
+                }
             }
         }
 
         // 7. Sync back to device
         if (state->chemistry().conc)
             state->chemistry().conc->mark_host_modified();
+    }
+
+    double GasChemProcess::solver_relative_tolerance() const {
+        return micm_instance_ ? micm_instance_->GetRosenbrockSolverParameters().relative_tolerance : 0.0;
     }
 
     void GasChemProcess::finalize() {
@@ -496,6 +594,7 @@ namespace catchem {
 extern "C" {
 void catchem_register_gaschem_cpp() {
     catchem::ProcessRegistry::get_instance().register_process(
-        std::string(catchem::ProcessNames::GasChem), []() { return std::make_shared<catchem::GasChemProcess>(); });
+        std::string(catchem::ProcessNames::GasChem), []() { return std::make_shared<catchem::GasChemProcess>(); }, {},
+        [](const catchem::ProcessConfig& config) { (void)catchem::GasChemProcess::parse_settings(config); });
 }
 }
