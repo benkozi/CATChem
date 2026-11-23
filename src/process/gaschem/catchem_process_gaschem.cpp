@@ -92,6 +92,17 @@ namespace catchem {
         for (const auto& path : config.option_paths()) {
             unknown.push_back(path);
         }
+        // gaschem has no scheme to select. The configuration layer treats the
+        // scheme selectors as framework keys for every process, so neither
+        // listing above reports them and they are checked here.
+        if (!config.scheme.empty()) {
+            unknown.emplace_back("scheme");
+        }
+        for (const char* selector : {"gas_scheme", "aero_scheme"}) {
+            if (!config.get_string(selector).empty()) {
+                unknown.emplace_back(selector);
+            }
+        }
         if (!unknown.empty()) {
             std::string accepted_names;
             for (const auto& name : accepted) {
@@ -436,7 +447,7 @@ namespace catchem {
                                 concentration_guard_message("GasChem received a negative or non-finite concentration",
                                                             ppmv_val, sp.name, icol, ilev, batch_idx));
                         if (ppmv_val < 0.0) {
-                            // Padding cells repeat the last valid column; count each real cell once.
+                            // Padding cells repeat the last valid column; count a value only in a real cell.
                             if (bcol < col_count) {
                                 floored_inputs.record(ppmv_val, sp.name, icol, ilev);
                             }
@@ -519,7 +530,7 @@ namespace catchem {
             }
         }
 
-        // 6. Report floored cells. This PET warns once for inputs and once for
+        // 6. Report floored values. This PET warns once for inputs and once for
         // solver outputs, the first time each is floored, and logs at debug after
         // that, so a long run does not log one line per PET per timestep. A
         // negative from the solver is a different problem from noise in the host's
